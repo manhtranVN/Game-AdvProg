@@ -2,26 +2,21 @@
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_image.h>
 
-entity::entity(double p_x, double p_y, SDL_Texture *p_tex)
+entity::entity(vector2d p_pos, SDL_Texture *p_tex, int tileW, int tileH, int tilesetCols)
+	:tex(p_tex), pos(p_pos), tileWidth(tileW), tileHeight(tileH), tilesetColumns(tilesetCols)
 {
-	x = p_x;
-	y = p_y;
-	tex = p_tex;
 	currentFrame.x = 0;
 	currentFrame.y = 0;
-	currentFrame.w = 32;
-	currentFrame.h = 32;
-
+	currentFrame.w = tileWidth;
+	currentFrame.h = tileHeight;
 }
 
-double entity::getX()
+void entity::setTileFrame(int tileIndex)
 {
-	return x;
-}
-
-double entity::getY()
-{
-	return y;
+	currentFrame.x = currentFrame.x = (tileIndex % tilesetColumns) * tileWidth;
+    currentFrame.y = (tileIndex / tilesetColumns) * tileHeight;
+    currentFrame.w = tileWidth; 
+    currentFrame.h = tileHeight;
 }
 
 SDL_Texture* entity::getTex()
