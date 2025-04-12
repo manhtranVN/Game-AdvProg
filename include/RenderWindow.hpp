@@ -16,7 +16,8 @@ public:
     void cleanUp();                                     
     void clear();                                       
     void render(entity& p_entity);                
-    void display();                                      
+    void display();   
+    SDL_Renderer* getRenderer();                                   
 
 private:
     SDL_Window* window;

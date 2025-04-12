@@ -14,6 +14,11 @@ public:
 	SDL_Texture* getTex();
 	SDL_Rect getCurrentFrame();	 
 	void setTileFrame(int tileIndex);
+	void setPos(double x, double y) 
+	{
+        pos.x = x;
+        pos.y = y;
+    }
 private:
 	vector2d pos;
 	SDL_Rect currentFrame;

@@ -13,7 +13,8 @@ entity::entity(vector2d p_pos, SDL_Texture *p_tex, int tileW, int tileH, int til
 
 void entity::setTileFrame(int tileIndex)
 {
-	currentFrame.x = currentFrame.x = (tileIndex % tilesetColumns) * tileWidth;
+	if (tilesetColumns <= 0) return;
+	currentFrame.x = (tileIndex % tilesetColumns) * tileWidth;
     currentFrame.y = (tileIndex / tilesetColumns) * tileHeight;
     currentFrame.w = tileWidth; 
     currentFrame.h = tileHeight;
