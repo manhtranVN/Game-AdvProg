@@ -12,12 +12,15 @@
 
 using namespace std;
 
-const int TILE_WIDTH = 3300*3;
-const int TILE_HEIGHT = 240*3;
+const int TILE_WIDTH = 9900;
+const int TILE_HEIGHT = 720;
 const int TILESET_COLS = 100;
 
-vector<vector<int>> mapData = 
-{
+const double LOGICAL_TILE_WIDTH = 9900/100*1.0;
+const double LOGICAL_TILE_HEIGHT = 720/7*1.0;
+
+// Thay thế hoàn toàn khai báo mapData cũ bằng cái này:
+vector<vector<int>> mapData = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -45,20 +48,23 @@ int main(int argc, char* args[])
     //int windowRefreshRate = window.getRefreshRate();
     cout << window.getRefreshRate() << endl;
 
-    SDL_Texture* tileMap = window.loadTexture("res/gfx/ContraMapStage1BG.jpg");
+    SDL_Texture* backgroundTexture = window.loadTexture("res/gfx/ContraMapStage1BG.png"); // Đổi tên biến cho rõ
     SDL_Texture* playerRunTexture = window.loadTexture("res/gfx/MainChar2.png");
     SDL_Texture* playerJumpTexture = window.loadTexture("res/gfx/Jumping.png");
 
-    
-    if (tileMap == nullptr || playerRunTexture == nullptr) 
-    {
+    if (backgroundTexture == nullptr || playerRunTexture == nullptr || playerJumpTexture == nullptr) {
+        cout << "Error loading textures!" << endl;
         window.cleanUp();
         IMG_Quit();
         SDL_Quit();
         return 1;
     }
 
-    entity mapTileDrawer({0, 0}, tileMap, TILE_WIDTH, TILE_HEIGHT, TILESET_COLS);
+    entity mapTileDrawer({0, 0}, backgroundTexture, TILE_WIDTH, TILE_HEIGHT, TILESET_COLS);
+
+    int BG_TEXTURE_WIDTH, BG_TEXTURE_HEIGHT;
+    SDL_QueryTexture(backgroundTexture, NULL, NULL, &BG_TEXTURE_WIDTH, &BG_TEXTURE_HEIGHT);
+    cout << "Background Texture Size: " << BG_TEXTURE_WIDTH << "x" << BG_TEXTURE_HEIGHT << endl;
 
     const double PLAYER_START_OFFSET_X = 100.0d;
     const double PLAYER_START_Y = 100.0d;
@@ -80,7 +86,7 @@ int main(int argc, char* args[])
                   PLAYER_FRAME_W, PLAYER_FRAME_H);            // Truyền kích thước frame
 
     int mapRows = mapData.size();
-    int mapCols = 100;
+    int mapCols = 0;
     if(mapRows > 0)
     {
         mapCols = mapData[0].size();
@@ -105,18 +111,9 @@ int main(int argc, char* args[])
         currentTime = newTime;
         accumulator += frameTime;
 
-        while(accumulator >= timeStep)
-        {
-            player.update(static_cast<double>(timeStep), mapData, TILE_WIDTH, TILE_HEIGHT);
-            while(SDL_PollEvent(&event))
-            {
-                if(event.type == SDL_QUIT) gameRunning = false;
-            }
-            accumulator -= timeStep;
-        }
-
         const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
-        double dx = 0.0f, dy = 0.0f; 
+        double dx = 0.0d, dy = 0.0d; 
+        player.handleInput(currentKeyStates); 
 
         if (currentKeyStates[SDL_SCANCODE_LEFT]) 
         {
@@ -138,8 +135,12 @@ int main(int argc, char* args[])
         cameraX += dx;
         cameraY += dy;
 
-        cameraX = max(1536.0d, cameraX);
+        cameraX = max(0.0d, cameraX);
         cameraY = max(0.0d, cameraY);
+        cameraX = min(cameraX, (double)BG_TEXTURE_WIDTH - SCREEN_WIDTH);
+        cameraY = min(cameraY, (double)BG_TEXTURE_HEIGHT - SCREEN_HEIGHT);
+        if (BG_TEXTURE_WIDTH <= SCREEN_WIDTH) cameraX = 0.0;
+        if (BG_TEXTURE_HEIGHT <= SCREEN_HEIGHT) cameraY = 0.0;
         //cout << cameraX << " " << cameraY << endl;
         if (MAP_PIXEL_WIDTH > SCREEN_WIDTH) 
         {
@@ -158,45 +159,57 @@ int main(int argc, char* args[])
             cameraY = 0.0d; 
         }
 
-        //const double alpha = accumulator / timeStep;
-
         while(accumulator >= timeStep)
         {
+            player.update(static_cast<double>(timeStep), mapData, LOGICAL_TILE_WIDTH, LOGICAL_TILE_HEIGHT);
+            while(SDL_PollEvent(&event))
+            {
+                if(event.type == SDL_QUIT) gameRunning = false;
+            }
             accumulator -= timeStep;
         }
 
+        //const double alpha = accumulator / timeStep;
+
         window.clear();
 
-        if (mapRows > 0 && mapCols > 0) 
-        {
-            int startCol = static_cast<int>(floor(cameraX / TILE_WIDTH));
-            int endCol = static_cast<int>(ceil((cameraX + SCREEN_WIDTH) / TILE_WIDTH));
-            int startRow = static_cast<int>(floor(cameraY / TILE_HEIGHT));
-            int endRow = static_cast<int>(ceil((cameraY + SCREEN_HEIGHT) / TILE_HEIGHT));
+        SDL_Rect bgSrcRect; // Phần của ảnh nền cần vẽ
+        bgSrcRect.x = static_cast<int>(cameraX);
+        bgSrcRect.y = static_cast<int>(cameraY);
+        bgSrcRect.w = SCREEN_WIDTH;
+        bgSrcRect.h = SCREEN_HEIGHT;
 
-            startCol = max(0, startCol);
-            endCol = min(mapCols, endCol); 
-            startRow = max(0, startRow);
-            endRow = min(mapRows, endRow); 
+        SDL_Rect bgDestRect; // Vẽ vào đâu trên màn hình
+        bgDestRect.x = 0;
+        bgDestRect.y = 0;
+        bgDestRect.w = SCREEN_WIDTH;
+        bgDestRect.h = SCREEN_HEIGHT;
 
-            for (int r = startRow; r < endRow; ++r) 
-            { 
-                for (int c = startCol; c < endCol; ++c) 
-                { 
-                    int tileIndex = mapData[r][c];
-                    if (tileIndex >= 0) 
-                    {
-                        mapTileDrawer.setTileFrame(tileIndex);
-                        SDL_Rect srcRect = mapTileDrawer.getCurrentFrame();
-                        SDL_Rect destRect;
-                        destRect.x = static_cast<int>(c * TILE_WIDTH - cameraX);
-                        destRect.y = static_cast<int>(r * TILE_HEIGHT - cameraY);
-                        destRect.w = TILE_WIDTH;
-                        destRect.h = TILE_HEIGHT;
-                        SDL_RenderCopy(window.getRenderer(), mapTileDrawer.getTex(), &srcRect, &destRect);
-                    }
+        SDL_RenderCopy(window.getRenderer(), backgroundTexture, &bgSrcRect, &bgDestRect);
+
+        SDL_Renderer* renderer = window.getRenderer();
+        if (renderer) {
+            // Đặt màu vẽ cho lưới (ví dụ: màu trắng hơi trong suốt)
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 50); // Màu trắng, alpha 50
+
+            // Vẽ các đường dọc
+            for (int c = 0; c <= mapCols; ++c) {
+                int screenX = static_cast<int>(c * LOGICAL_TILE_WIDTH - cameraX);
+                // Chỉ vẽ nếu đường kẻ nằm trong màn hình (tối ưu nhỏ)
+                if (screenX >= 0 && screenX < SCREEN_WIDTH) {
+                    SDL_RenderDrawLine(renderer, screenX, 0, screenX, SCREEN_HEIGHT);
                 }
             }
+            // Vẽ các đường ngang
+            for (int r = 0; r <= mapRows; ++r) {
+                int screenY = static_cast<int>(r * LOGICAL_TILE_HEIGHT - cameraY);
+                // Chỉ vẽ nếu đường kẻ nằm trong màn hình (tối ưu nhỏ)
+                if (screenY >= 0 && screenY < SCREEN_HEIGHT) {
+                    SDL_RenderDrawLine(renderer, 0, screenY, SCREEN_WIDTH, screenY);
+                }
+            }
+             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE); // Tắt blend
         }
 
         player.render(window, cameraX, cameraY);

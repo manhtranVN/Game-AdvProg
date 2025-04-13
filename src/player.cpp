@@ -80,7 +80,8 @@ void Player::handleInput(const Uint8* keyStates)
 }
 
 void Player::update(double dt, const vector<vector<int>>& mapData, int tileWidth, int tileHeight) 
-{
+{   
+    cout << "[Player Update START] Received Tile Dimensions: W=" << tileWidth << " H=" << tileHeight << endl;
     applyGravity(dt);
     move(dt); 
     checkMapCollision(mapData, tileWidth, tileHeight); 
@@ -105,7 +106,8 @@ void Player::move(double dt)
     
 }
 
-void Player::checkMapCollision(const vector<vector<int>>& mapData, int tileWidth, int tileHeight) {
+void Player::checkMapCollision(const vector<vector<int>>& mapData, int tileWidth, int tileHeight) 
+{
     vector2d& posRef = getPos();
     SDL_Rect playerHB = getWorldHitbox();
 
@@ -165,24 +167,62 @@ void Player::checkMapCollision(const vector<vector<int>>& mapData, int tileWidth
         }
     } 
     else 
-    if (velocity.x < 0) 
+    if (velocity.x < 0) //Di chuyển sang trái
     { 
-        int leftX = playerHB.x;
+        int leftX = playerHB.x; // Tọa độ X cạnh trái hitbox
+        int checkYMid = playerHB.y + playerHB.h / 2; // Điểm kiểm tra giữa người theo chiều Y
+
+        // Lấy chỉ số cột của tile mà cạnh trái hitbox đang ở hoặc sắp vào
+        int tileCol = static_cast<int>(floor(static_cast<float>(leftX) / tileWidth));
+
         int tileLeftType = getTileAt(leftX, checkYMid, mapData, tileWidth, tileHeight);
-        if (tileLeftType == TILE_GRASS) 
+
+        // --- THÊM LOG DEBUG CHI TIẾT ---
+        cout << "[DEBUG] Checking Left Collision:\n";
+        cout << "  Current pos.x: " << getPos().x << ", velocity.x: " << velocity.x << "\n";
+        cout << "  Hitbox leftX: " << leftX << ", checkYMid: " << checkYMid << "\n";
+        cout << "  Checking Tile Column Index: " << tileCol << "\n";
+        cout << "  Tile Type Found: " << tileLeftType << "\n";
+        // --------------------------------
+
+        if (tileLeftType == TILE_GRASS /* || Các loại tile rắn khác */) 
         {
-            velocity.x = 0;
-            int tileCol = static_cast<int>(floor(static_cast<double>(leftX) / tileWidth));
-            posRef.x = static_cast<double>((tileCol + 1) * tileWidth - hitbox.x);
+            cout << "  --> Left Wall Collision Detected!\n";
+            velocity.x = 0; // Dừng di chuyển ngang
+
+            // Tính toán tọa độ X của cạnh PHẢI của ô tile vừa va chạm
+            float tileRightEdgeX = static_cast<float>((tileCol + 1) * tileWidth);
+
+            // Tính toán vị trí mới cho player (pos.x) sao cho cạnh TRÁI của hitbox
+            // (pos.x + hitbox.x) nằm ngay sát cạnh PHẢI của ô tile (tileRightEdgeX)
+            // => pos.x = tileRightEdgeX - hitbox.x
+            float newX = tileRightEdgeX - static_cast<float>(hitbox.x);
+
+            // --- THÊM LOG DEBUG CHI TIẾT ---
+            cout << "      Collided Tile Column: " << tileCol << "\n";
+            cout << "      Tile Right Edge X: " << tileRightEdgeX << "\n";
+            cout << "      Player Hitbox Offset X (hitbox.x): " << hitbox.x << "\n";
+            cout << "      Calculated newX: " << newX << "\n";
+            // ---------------------------------
+
+            // Áp dụng vị trí mới
+            vector2d& posRef = getPos();
+            posRef.x = newX;
+            cout << "      Applied new pos.x: " << posRef.x << "\n"; // Xem giá trị cuối cùng
+
+        } 
+        else 
+        {
+            cout << "  --> No Left Wall Collision.\n";
         }
-    }
-     // --- Reset trạng thái DROPPING nếu không còn yêu cầu hoặc đã rơi qua ---
-     if (currentState == PlayerState::DROPPING && !requestDrop) 
-     {
-         // Kiểm tra nếu đã hoàn toàn rơi qua khỏi nền cũ thì chuyển sang FALLING
-         // (Logic kiểm tra cần chính xác hơn)
-         // Tạm thời: Nếu không còn giữ nút xuống thì ngừng DROPPING
-         currentState = PlayerState::FALLING; // Sẽ tự cập nhật trong updateState nếu cần
+         // --- Reset trạng thái DROPPING nếu không còn yêu cầu hoặc đã rơi qua ---
+        if (currentState == PlayerState::DROPPING && !requestDrop) 
+        {
+             // Kiểm tra nếu đã hoàn toàn rơi qua khỏi nền cũ thì chuyển sang FALLING
+             // (Logic kiểm tra cần chính xác hơn)
+             // Tạm thời: Nếu không còn giữ nút xuống thì ngừng DROPPING
+             currentState = PlayerState::FALLING; // Sẽ tự cập nhật trong updateState nếu cần
+        }
     }
 
 }
@@ -304,6 +344,6 @@ void Player::render(RenderWindow& window, double cameraX, double cameraY)
     destRect.h = currentSourceRect.h;
 
     SDL_RendererFlip flip = (facing == FacingDirection::LEFT) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
-    cout << "Rendering Player at: (" << destRect.x << ", " << destRect.y << ")" << endl;
+    //cout << "Rendering Player at: (" << destRect.x << ", " << destRect.y << ")" << endl;
     SDL_RenderCopyEx(window.getRenderer(), textureToRender, &currentSourceRect, &destRect, 0.0, NULL, flip);
 }
