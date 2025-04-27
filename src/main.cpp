@@ -48,10 +48,10 @@ Mix_Chunk* gEnemyDeathSound = nullptr;
 
 int main(int argc, char* args[]) {
     // --- Khởi tạo SDL, IMG, Mixer, và TTF ---
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) > 0) { cerr << "SDL_Init failed: " << SDL_GetError() << endl; return 1; }
-    if (!IMG_Init(IMG_INIT_PNG)) { cerr << "IMG_Init failed: " << IMG_GetError() << endl; SDL_Quit(); return 1; }
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) { cerr << "SDL_mixer could not initialize! Mix_Error: " << Mix_GetError() << endl; IMG_Quit(); SDL_Quit(); return 1; }
-    if (TTF_Init() == -1) { cerr << "SDL_ttf could not initialize! TTF_Error: " << TTF_GetError() << endl; Mix_CloseAudio(); IMG_Quit(); SDL_Quit(); return 1; }
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) > 0) { cerr << "SDL_Init failed: " << SDL_GetError() << endl; _sleep(10000); return 1; }
+    if (!IMG_Init(IMG_INIT_PNG)) { cerr << "IMG_Init failed: " << IMG_GetError() << endl; SDL_Quit(); _sleep(10000); return 1; }
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) { cerr << "SDL_mixer could not initialize! Mix_Error: " << Mix_GetError() << endl; IMG_Quit(); SDL_Quit(); _sleep(10000); return 1; }
+    if (TTF_Init() == -1) { cerr << "SDL_ttf could not initialize! TTF_Error: " << TTF_GetError() << endl; Mix_CloseAudio(); IMG_Quit(); SDL_Quit(); _sleep(10000); return 1; }
     cout << "SDL_mixer and SDL_ttf initialized." << endl;
 
     // --- Thiết lập Cửa sổ và Renderer ---
@@ -63,7 +63,7 @@ int main(int argc, char* args[]) {
     // --- Nạp Font ---
     TTF_Font* uiFont = TTF_OpenFont("res/fonts/Contra.ttf", 24); // Font cho UI trong game
     TTF_Font* menuFont = TTF_OpenFont("res/fonts/Contra.ttf", 28); // Font cho menu
-    if (uiFont == nullptr || menuFont == nullptr) { cerr << "Failed to load font(s)! TTF_Error: " << TTF_GetError() << endl; TTF_Quit(); Mix_CloseAudio(); IMG_Quit(); SDL_Quit(); return 1; }
+    if (uiFont == nullptr || menuFont == nullptr) { cerr << "Failed to load font(s)! TTF_Error: " << TTF_GetError() << endl; TTF_Quit(); Mix_CloseAudio(); IMG_Quit(); SDL_Quit(); _sleep(10000); return 1; }
     cout << "Fonts loaded." << endl;
 
     // --- Nạp Textures ---
@@ -97,7 +97,7 @@ int main(int argc, char* args[]) {
         SDL_DestroyTexture(menuBackgroundTexture); SDL_DestroyTexture(backgroundTexture); SDL_DestroyTexture(playerRunTexture); SDL_DestroyTexture(playerJumpTexture); SDL_DestroyTexture(playerEnterWaterTexture); SDL_DestroyTexture(playerSwimTexture); SDL_DestroyTexture(playerShootHorizTexture); SDL_DestroyTexture(playerShootUpTexture); SDL_DestroyTexture(playerRunShootHorizTexture); SDL_DestroyTexture(bulletTexture); SDL_DestroyTexture(enemyTexture);
         Mix_FreeMusic(backgroundMusic); Mix_FreeChunk(shootSound); Mix_FreeChunk(gEnemyDeathSound);
         TTF_CloseFont(uiFont); TTF_CloseFont(menuFont);
-        TTF_Quit(); Mix_CloseAudio(); IMG_Quit(); SDL_Quit(); return 1;
+        TTF_Quit(); Mix_CloseAudio(); IMG_Quit(); SDL_Quit(); _sleep(10000); return 1;
     }
 
     // --- Lấy kích thước ảnh nền game ---
@@ -169,7 +169,7 @@ int main(int argc, char* args[]) {
 
     // --- Kích thước Lưới Logic Map ---
     int mapRows = mapData.size(); int mapCols = 0;
-    if(mapRows > 0) mapCols = mapData[0].size(); else { cerr << "Error: mapData is empty!" << endl; return 1; }
+    if(mapRows > 0) mapCols = mapData[0].size(); else { cerr << "Error: mapData is empty!" << endl; _sleep(10000); return 1; }
     cout << "Logical Map Grid: " << mapRows << " rows x " << mapCols << " cols" << endl;
     cout << "Logical Tile Size: " << LOGICAL_TILE_WIDTH << "x" << LOGICAL_TILE_HEIGHT << endl;
 
