@@ -1,19 +1,21 @@
 #include "Player.hpp"
-#include "RenderWindow.hpp" // Đảm bảo bạn có file này và nó định nghĩa lớp RenderWindow
+#include "RenderWindow.hpp" // Cần include RenderWindow.hpp để vẽ
 #include <SDL2/SDL.h>
 #include <algorithm> // For max, min
 #include <cmath>     // For abs, round, floor
 #include <vector>    // For vector
 #include <iostream>  // For cout, endl, cerr (debugging)
+#include <set>       // Cần include set ở đây nữa nếu chưa có trong hpp
+#include <utility>   // Cần include utility ở đây nữa nếu chưa có trong hpp
 
 // Sử dụng namespace std để tránh gõ std:: nhiều lần
 using namespace std;
 
-// --- Tile Type Constants ---
+// --- Tile Type Constants (Định nghĩa lại ở đây để dễ tham khảo) ---
 const int TILE_EMPTY = 0;
-const int TILE_GRASS = 1;          // Walkable, Droppable
-const int TILE_UNKNOWN_SOLID = 2; // Solid Wall/Ground
-const int TILE_WATER_SURFACE = 3; // Water Surface
+const int TILE_GRASS = 1;          // Đi được, Lộn xuống được, Nhảy xuyên qua từ dưới
+const int TILE_UNKNOWN_SOLID = 2; // Tường/Đất rắn, không thể đi/nhảy xuyên
+const int TILE_WATER_SURFACE = 3; // Mặt nước
 
 // --- Constructor ---
 Player::Player(vector2d p_pos,
@@ -21,9 +23,9 @@ Player::Player(vector2d p_pos,
                SDL_Texture* p_jumpTex, int p_jumpSheetCols,
                SDL_Texture* p_enterWaterTex, int p_enterWaterSheetCols,
                SDL_Texture* p_swimTex, int p_swimSheetCols,
-               SDL_Texture* p_shootHorizTex, int p_shootHorizSheetCols, // Bắn ngang khi đứng yên / trên không
+               SDL_Texture* p_shootHorizTex, int p_shootHorizSheetCols,
                SDL_Texture* p_shootUpTex, int p_shootUpSheetCols,
-               SDL_Texture* p_runShootHorizTex, int p_runShootHorizSheetCols, // <<< Texture chạy bắn
+               SDL_Texture* p_runShootHorizTex, int p_runShootHorizSheetCols,
                int p_frameW, int p_frameH)
     : entity(p_pos, p_runTex, p_frameW, p_frameH, p_runSheetCols), // Gọi constructor lớp cha
       runTexture(p_runTex),
@@ -32,14 +34,14 @@ Player::Player(vector2d p_pos,
       swimTexture(p_swimTex),
       shootHorizTexture(p_shootHorizTex),
       shootUpTexture(p_shootUpTex),
-      runShootHorizTexture(p_runShootHorizTex), // <<< Gán texture chạy bắn
+      runShootHorizTexture(p_runShootHorizTex),
       runSheetColumns(p_runSheetCols),
       jumpSheetColumns(p_jumpSheetCols),
       enterWaterSheetColumns(p_enterWaterSheetCols),
       swimSheetColumns(p_swimSheetCols),
       shootHorizSheetColumns(p_shootHorizSheetCols),
       shootUpSheetColumns(p_shootUpSheetCols),
-      runShootHorizSheetColumns(p_runShootHorizSheetCols), // <<< Gán số cột chạy bắn
+      runShootHorizSheetColumns(p_runShootHorizSheetCols),
       frameWidth(p_frameW),
       frameHeight(p_frameH),
       velocity({0.0, 0.0}),
@@ -48,16 +50,20 @@ Player::Player(vector2d p_pos,
       isOnGround(false),
       isInWaterState(false),
       waterSurfaceY(0.0),
-      shootRequested(false), // Cờ để báo hiệu tạo đạn
+      shootRequested(false),
       shootUpHeld(false),
-      isShootingHeld(false), // <<< Khởi tạo cờ giữ bắn là false
+      isShootingHeld(false),
       shootCooldownTimer(0.0),
       animTimer(0.0),
       currentAnimFrameIndex(0),
       currentMapData(nullptr),
+      currentMapRows(0),
+      currentMapCols(0),
       currentTileWidth(0),
       currentTileHeight(0)
+      // temporarilyDisabledTiles được khởi tạo rỗng mặc định
 {
+    // Hitbox gốc của bạn
     hitbox.x = 10;
     hitbox.y = 4;
     hitbox.w = 13;
@@ -78,208 +84,210 @@ SDL_Rect Player::getWorldHitbox() {
 
 // --- Handle Input (Keys Held Down) ---
 void Player::handleInput(const Uint8* keyStates) {
+    // Kiểm tra giữ phím bắn và hướng lên
     shootUpHeld = keyStates[SDL_SCANCODE_UP];
-    isShootingHeld = keyStates[SDL_SCANCODE_F]; // <<< CẬP NHẬT TRẠNG THÁI GIỮ PHÍM BẮN 'F'
+    isShootingHeld = keyStates[SDL_SCANCODE_F];
 
-    // --- Xử lý bắn khi giữ phím ---
-    // Chỉ cho phép bắn khi không ở trong nước và cooldown đã sẵn sàng
+    // Yêu cầu bắn nếu giữ phím F, không ở trong nước và cooldown đã hết
     if (isShootingHeld && !isInWaterState && shootCooldownTimer <= 0.0) {
-        // cout << "[DEBUG] handleInput: F held & Cooldown OK. Requesting shot." << endl; // Debug log
-        shootRequested = true; // Đặt cờ để hàm wantsToShoot() xử lý
-        shootCooldownTimer = SHOOT_COOLDOWN; // Reset cooldown để có tốc độ bắn
-        // Không cần reset animation frame ở đây nữa
+        shootRequested = true; // Đặt cờ yêu cầu bắn
+        shootCooldownTimer = SHOOT_COOLDOWN; // Reset cooldown
     }
-    // --------------------------------
 
-    // --- Xử lý di chuyển ---
-    // Logic di chuyển này sẽ xác định velocity.x, nhưng trạng thái animation cuối cùng
-    // (RUNNING vs RUN_SHOOTING_HORIZ) sẽ được quyết định trong updateState()
-    if (isInWaterState) {
-        // Di chuyển trong nước
-        if (keyStates[SDL_SCANCODE_LEFT]) {
-            velocity.x = -MOVE_SPEED * 0.7; facing = FacingDirection::LEFT;
-        } else if (keyStates[SDL_SCANCODE_RIGHT]) {
-            velocity.x = MOVE_SPEED * 0.7; facing = FacingDirection::RIGHT;
-        } else {
-            velocity.x *= WATER_DRAG_X; if (abs(velocity.x) < 1.0) velocity.x = 0.0;
-        }
-    } else {
-        // Di chuyển trên cạn
-        if (keyStates[SDL_SCANCODE_LEFT]) {
-            velocity.x = -MOVE_SPEED; facing = FacingDirection::LEFT;
-        } else if (keyStates[SDL_SCANCODE_RIGHT]) {
-            velocity.x = MOVE_SPEED; facing = FacingDirection::RIGHT;
-        } else {
-            velocity.x = 0.0; // Đứng yên nếu không nhấn trái/phải
-        }
+    // Xử lý di chuyển ngang
+    if (isInWaterState) { // Di chuyển trong nước chậm hơn và có lực cản
+        if (keyStates[SDL_SCANCODE_LEFT]) { velocity.x = -MOVE_SPEED * 0.7; facing = FacingDirection::LEFT; }
+        else if (keyStates[SDL_SCANCODE_RIGHT]) { velocity.x = MOVE_SPEED * 0.7; facing = FacingDirection::RIGHT; }
+        else { velocity.x *= WATER_DRAG_X; if (abs(velocity.x) < 1.0) velocity.x = 0.0; } // Lực cản
+    } else { // Di chuyển trên cạn
+        if (keyStates[SDL_SCANCODE_LEFT]) { velocity.x = -MOVE_SPEED; facing = FacingDirection::LEFT; }
+        else if (keyStates[SDL_SCANCODE_RIGHT]) { velocity.x = MOVE_SPEED; facing = FacingDirection::RIGHT; }
+        else { velocity.x = 0.0; } // Đứng yên nếu không nhấn trái/phải
     }
-    //-------------------------
 }
 
-// --- Handle Key Down Event ---
-// Chỉ xử lý các hành động nhấn 1 lần: Nhảy, Rơi qua platform
+// --- Handle Key Down Event (Nhấn phím một lần) ---
 void Player::handleKeyDown(SDL_Keycode key) {
+    // Xử lý trong nước
     if (isInWaterState) {
-        if (key == SDLK_SPACE) {
+        if (key == SDLK_SPACE) { // Nhảy trong nước
             velocity.y = -WATER_JUMP_STRENGTH;
-            // Có thể thêm state WATER_JUMP nếu cần animation riêng
+            currentState = PlayerState::WATER_JUMP;
+            currentAnimFrameIndex = 0;
         }
-    } else { // Trên cạn
-        // Nhảy
+        // Không cho lộn xuống khi đang bơi
+    }
+    // Xử lý trên cạn/không khí
+    else {
+        // Nhảy (chỉ khi đang trên mặt đất)
         if (key == SDLK_SPACE && isOnGround) {
             velocity.y = -JUMP_STRENGTH;
             isOnGround = false;
-            currentState = PlayerState::JUMPING; // Chuyển state ngay lập tức
-            currentAnimFrameIndex = 0; // Reset animation nhảy
+            currentState = PlayerState::JUMPING;
+            currentAnimFrameIndex = 0;
         }
-        // Rơi qua platform
+        // Lộn xuống (nhấn XUỐNG khi đang trên mặt đất)
         else if (key == SDLK_DOWN && isOnGround) {
             SDL_Rect hb = getWorldHitbox();
             double checkX = hb.x + hb.w / 2.0;
-            double checkY = hb.y + hb.h + 1.0; // Kiểm tra ngay dưới chân
+            // Xác định Row, Col của tile ngay dưới chân một chút
+            double checkY_below = hb.y + hb.h + 1.0;
+            int groundRow = static_cast<int>(floor(checkY_below / currentTileHeight));
+            int groundCol = static_cast<int>(floor(checkX / currentTileWidth));
 
-            if (currentMapData) {
-                int groundTile = getTileAt(checkX, checkY);
-                if (groundTile == TILE_GRASS) { // Chỉ rơi qua TILE_GRASS
-                    isOnGround = false;
-                    currentState = PlayerState::DROPPING; // Chuyển state
-                    getPos().y += 2.0; // Di chuyển nhẹ xuống để chắc chắn ra khỏi platform
-                    currentAnimFrameIndex = 0; // Reset animation rơi/nhảy
-                    // cout << "--- Dropping through platform ---" << endl;
+            // Kiểm tra tile đó có hợp lệ và là GRASS (1) không
+            if (groundRow >= 0 && groundRow < currentMapRows && groundCol >= 0 && groundCol < currentMapCols) {
+                // Đảm bảo có dòng dữ liệu mapData[groundRow] tồn tại
+                if (groundCol < (*currentMapData)[groundRow].size()) {
+                    int groundTileType = (*currentMapData)[groundRow][groundCol];
+                    if (groundTileType == TILE_GRASS) {
+                        // <<< Vô hiệu hóa tile cỏ đang đứng >>>
+                        temporarilyDisabledTiles.insert({groundRow, groundCol});
+                        // cout << "[DEBUG] Disabled tile (" << groundRow << ", " << groundCol << ")" << endl;
+
+                        isOnGround = false; // Không còn đứng trên đất nữa
+                        currentState = PlayerState::DROPPING; // Chuyển sang trạng thái rơi/lộn xuống
+                        getPos().y += 3.0; // Di chuyển nhẹ xuống để chắc chắn rời khỏi platform
+                        currentAnimFrameIndex = 0; // Reset animation (sẽ dùng anim nhảy/rơi)
+                    }
                 }
             }
         }
-        // <<< Không còn xử lý phím 'F' ở đây >>>
+        // Không xử lý bắn 'F' ở đây nữa
     }
 }
 
-
-// --- Hàm kiểm tra và trả thông tin tạo đạn ---
+// --- Wants To Shoot (Kiểm tra cờ yêu cầu bắn và trả thông tin) ---
 bool Player::wantsToShoot(vector2d& out_bulletStartPos, vector2d& out_bulletVelocity) {
-    // Hàm này chỉ kiểm tra cờ shootRequested và reset nó
-    // Cờ này được đặt trong handleInput khi giữ phím F và cooldown OK
-    // cout << "[DEBUG] wantsToShoot called. Current shootRequested = " << boolalpha << shootRequested << endl; // Debug log
-
     if (!shootRequested) {
-        return false; // Không có yêu cầu bắn nào được đặt
+        return false; // Không có yêu cầu bắn
     }
 
-    shootRequested = false;
+    shootRequested = false; // Reset cờ
     SDL_Rect hb = getWorldHitbox();
     double startX, startY, bulletVelX, bulletVelY;
 
-    if (shootUpHeld) {
-        startX = hb.x + hb.w / 2.0 - 5.0; startY = hb.y - 10.0;
-        bulletVelX = 0; // Vận tốc X = 0 khi bắn lên
-        bulletVelY = -BULLET_SPEED; // Vận tốc Y âm (đi lên)
-    } else {
-        startX = (facing == FacingDirection::RIGHT) ? (hb.x + hb.w) : (hb.x - 10.0);
-        startY = hb.y + hb.h * 0.4;
-        bulletVelX = (facing == FacingDirection::RIGHT) ? BULLET_SPEED : -BULLET_SPEED; // Vận tốc X dương hoặc âm
-        bulletVelY = 0; // Vận tốc Y = 0 khi bắn ngang
+    if (shootUpHeld) { // Bắn lên
+        startX = hb.x + hb.w / 2.0 - 5.0; // Điều chỉnh vị trí đạn bắn lên
+        startY = hb.y - 10.0;
+        bulletVelX = 0;
+        bulletVelY = -BULLET_SPEED;
+    } else { // Bắn ngang
+        startX = (facing == FacingDirection::RIGHT) ? (hb.x + hb.w) : (hb.x - 10.0); // Điều chỉnh vị trí đạn bắn ngang
+        startY = hb.y + hb.h * 0.4; // Vị trí Y của nòng súng (ví dụ)
+        bulletVelX = (facing == FacingDirection::RIGHT) ? BULLET_SPEED : -BULLET_SPEED;
+        bulletVelY = 0;
     }
     out_bulletStartPos = {startX, startY};
-    out_bulletVelocity = {bulletVelX, bulletVelY}; // <<< Gán vận tốc đã tính
-
-    // Log vận tốc ngay trước khi trả về
-    cout << "[DEBUG] Player::wantsToShoot Calculated Velocity: (" << out_bulletVelocity.x << ", " << out_bulletVelocity.y << ")" << endl; // <<< DEBUG LOG
-
+    out_bulletVelocity = {bulletVelX, bulletVelY};
     return true;
 }
 
-
-// --- Debug Print Tile Column Info ---
-// Giữ nguyên hàm này nếu bạn cần dùng để debug va chạm
+// --- Debug Print Tile Column Info (Tùy chọn giữ lại) ---
 void Player::printTileColumnInfo() {
-    if (!currentMapData || currentTileWidth <= 0 || currentTileHeight <= 0) return;
-    SDL_Rect currentWorldHB = getWorldHitbox();
-    double checkWorldX = static_cast<double>(currentWorldHB.x) + static_cast<double>(currentWorldHB.w) / 2.0;
-    double startWorldY = static_cast<double>(currentWorldHB.y);
-    int currentCol = static_cast<int>(floor(checkWorldX / currentTileWidth));
-    int startRow = static_cast<int>(floor(startWorldY / currentTileHeight));
-    cout << "\n--- Player Tile Column Info (Col: " << currentCol << ") ---" << endl;
-    cout << "  Player World Pos: X=" << getPos().x << ", Y=" << getPos().y << endl;
-    cout << "  Hitbox World Pos: X=" << currentWorldHB.x << ", Y=" << currentWorldHB.y
-         << ", W=" << currentWorldHB.w << ", H=" << currentWorldHB.h << endl;
-    cout << "  Player Top approx Row: " << startRow << endl;
-    int mapTotalRows = currentMapData->size();
-    for (int r = max(0, startRow - 2); r < mapTotalRows && r < startRow + 7; ++r) {
-        int tileType = TILE_EMPTY;
-        if (r >= 0 && r < currentMapData->size()) {
-            const auto& rowData = (*currentMapData)[r];
-            if (currentCol >= 0 && currentCol < rowData.size()) { tileType = rowData[currentCol]; }
-        }
-        cout << "  Row " << r << ": Type=" << tileType;
-        double hbTopY = static_cast<double>(currentWorldHB.y); double hbBottomY = static_cast<double>(currentWorldHB.y) + currentWorldHB.h;
-        double rowTopY = static_cast<double>(r * currentTileHeight); double rowBottomY = static_cast<double>((r + 1) * currentTileHeight);
-        bool overlaps = (hbTopY < rowBottomY && hbBottomY > rowTopY);
-        bool feetNear = (abs(hbBottomY - rowTopY) < 5.0 && tileType != TILE_EMPTY);
-        if (overlaps) { cout << " <-- Hitbox Overlaps"; if (feetNear && velocity.y >= 0) cout << " (Feet near top)"; }
-        cout << endl;
-    }
-    if (startRow + 7 < mapTotalRows) { cout << "  ..." << endl; }
-    cout << "-----------------------------------------" << endl;
+   // In thông tin debug về tile và vị trí người chơi
+   if (!currentMapData || currentTileWidth <= 0 || currentTileHeight <= 0) return;
+   SDL_Rect currentWorldHB = getWorldHitbox();
+   double checkWorldX = static_cast<double>(currentWorldHB.x) + static_cast<double>(currentWorldHB.w) / 2.0;
+   double startWorldY = static_cast<double>(currentWorldHB.y);
+   int currentCol = static_cast<int>(floor(checkWorldX / currentTileWidth));
+   int startRow = static_cast<int>(floor(startWorldY / currentTileHeight));
+   cout << "\n--- Player Tile Column Info (Col: " << currentCol << ") ---" << endl;
+   cout << "  Player World Pos: X=" << getPos().x << ", Y=" << getPos().y << endl;
+   cout << "  Hitbox World Pos: X=" << currentWorldHB.x << ", Y=" << currentWorldHB.y
+        << ", W=" << currentWorldHB.w << ", H=" << currentWorldHB.h << endl;
+   cout << "  Player Top approx Row: " << startRow << endl;
+   int mapTotalRows = currentMapData->size();
+   for (int r = max(0, startRow - 2); r < mapTotalRows && r < startRow + 7; ++r) {
+       int tileType = TILE_EMPTY; // Mặc định nếu ngoài biên
+       if (r >= 0 && r < currentMapData->size()) {
+           // Kiểm tra biên cột trước khi truy cập
+           if (currentCol >= 0 && currentCol < (*currentMapData)[r].size()) {
+               tileType = (*currentMapData)[r][currentCol];
+            }
+       }
+       cout << "  Row " << r << ": Type=" << tileType;
+       // Kiểm tra xem tile này có đang bị vô hiệu hóa không
+       if (temporarilyDisabledTiles.count({r, currentCol}) > 0) {
+            cout << " (DISABLED)";
+       }
+       double hbTopY = static_cast<double>(currentWorldHB.y);
+       double hbBottomY = static_cast<double>(currentWorldHB.y) + currentWorldHB.h;
+       double rowTopY = static_cast<double>(r * currentTileHeight);
+       double rowBottomY = static_cast<double>((r + 1) * currentTileHeight);
+       bool overlaps = (hbTopY < rowBottomY && hbBottomY > rowTopY);
+       bool feetNear = (abs(hbBottomY - rowTopY) < 5.0 && tileType != TILE_EMPTY && tileType != TILE_WATER_SURFACE); // Chỉ feet near với đất liền
+       if (overlaps) { cout << " <-- HB Overlaps"; }
+       if (feetNear && velocity.y >= 0) { cout << " (Feet near ground)"; }
+       cout << endl;
+   }
+   if (startRow + 7 < mapTotalRows) { cout << "  ..." << endl; }
+   cout << "  State: " << static_cast<int>(currentState) << ", isOnGround: " << boolalpha << isOnGround << ", isInWater: " << isInWaterState << endl;
+   cout << "  Velocity: (" << velocity.x << ", " << velocity.y << ")" << endl;
+   cout << "-----------------------------------------" << endl;
 }
 
-// --- Update Function ---
-// Giữ nguyên logic tổng thể: cập nhật cooldown, vật lý, va chạm, state, animation
+
+// --- Update Function (Thứ tự gọi hàm giữ nguyên như lần sửa trước) ---
 void Player::update(double dt, const vector<vector<int>>& mapData, int tileWidth, int tileHeight) {
+    // Lưu thông tin map
     currentMapData = &mapData;
     currentTileWidth = tileWidth;
     currentTileHeight = tileHeight;
+    currentMapRows = mapData.size();
+    if (currentMapRows > 0) currentMapCols = mapData[0].size(); else currentMapCols = 0;
 
-    // Cập nhật cooldown bắn
-    if (shootCooldownTimer > 0.0) {
-        shootCooldownTimer -= dt;
-    }
+    // Cập nhật cooldown
+    if (shootCooldownTimer > 0.0) { shootCooldownTimer -= dt; }
 
-    applyGravity(dt);   // Áp dụng trọng lực
-    move(dt);           // Di chuyển dựa trên vận tốc (đã được set trong handleInput)
-    checkMapCollision(); // Kiểm tra và xử lý va chạm map, cập nhật isOnGround
-    updateState();      // <<< Cập nhật trạng thái dựa trên isShootingHeld, isOnGround, velocity, etc.
-    updateAnimation(dt); // Cập nhật frame animation dựa trên currentState
+    // Cập nhật vật lý
+    applyGravity(dt);
+    move(dt);
 
-    // Giới hạn vị trí trái
-    vector2d& posRef = getPos();
-    posRef.x = max(0.0, posRef.x);
+    // Kiểm tra va chạm VÀ cập nhật trạng thái vật lý (isOnGround, isInWater)
+    checkMapCollision();
 
-    // Optional: In thông tin debug
+    // Cập nhật trạng thái logic (IDLE, RUNNING, JUMPING, DROPPING...) dựa trên trạng thái vật lý
+    updateState(); // <<< Gọi trước restore
+
+    // Cập nhật frame animation dựa trên trạng thái logic hiện tại
+    updateAnimation(dt);
+
+    // Khôi phục lại các tile cỏ đã đi qua (sau khi va chạm và state đã được xử lý)
+    restoreDisabledTiles(); // <<< Gọi sau cùng
+
+    // Optional: In debug info
     // printTileColumnInfo();
 }
 
+
 // --- Apply Gravity ---
-// Giữ nguyên logic
 void Player::applyGravity(double dt) {
-    if (isInWaterState) {
+    if (isInWaterState) { // Trong nước, trọng lực yếu hơn
         velocity.y += GRAVITY * WATER_GRAVITY_MULTIPLIER * dt;
-        velocity.y = max(-MAX_FALL_SPEED * WATER_MAX_SPEED_MULTIPLIER,
+        velocity.y = max(-MAX_FALL_SPEED * WATER_MAX_SPEED_MULTIPLIER, // Giới hạn tốc độ lên/xuống trong nước
                         min(MAX_FALL_SPEED * WATER_MAX_SPEED_MULTIPLIER, velocity.y));
-    } else if (!isOnGround) {
+    } else if (!isOnGround) { // Trên không, trọng lực bình thường
         velocity.y += GRAVITY * dt;
-        velocity.y = min(velocity.y, MAX_FALL_SPEED);
+        velocity.y = min(velocity.y, MAX_FALL_SPEED); // Giới hạn tốc độ rơi tối đa
     }
-     // Nếu đang trên mặt đất (và không phải DROPPING), velocity.y đã được set = 0 trong checkMapCollision
+    // Nếu isOnGround = true, velocity.y sẽ được đặt lại = 0 trong checkMapCollision
 }
 
-
 // --- Move Function ---
-// Giữ nguyên logic
 void Player::move(double dt) {
     vector2d& posRef = getPos();
     posRef.x += velocity.x * dt;
     posRef.y += velocity.y * dt;
 }
 
-// --- Check Map Collision ---
-// Giữ nguyên logic va chạm dọc và ngang
+
+// --- Check Map Collision (VIẾT LẠI VỚI ƯU TIÊN XỬ LÝ ĐÁY) ---
 void Player::checkMapCollision() {
-    if (!currentMapData || currentTileWidth <= 0 || currentTileHeight <=0) return;
+    if (!currentMapData || currentTileWidth <= 0 || currentTileHeight <= 0 || currentMapRows <= 0) return;
 
     vector2d& posRef = getPos();
     SDL_Rect playerHB = getWorldHitbox();
-    // bool onGroundBeforeCheck = isOnGround; // Không cần thiết nữa
-
-    isOnGround = false; // Reset mỗi lần kiểm tra
 
     double feetWorldY = static_cast<double>(playerHB.y) + playerHB.h;
     double headWorldY = static_cast<double>(playerHB.y);
@@ -288,284 +296,373 @@ void Player::checkMapCollision() {
     double rightWorldX = static_cast<double>(playerHB.x) + playerHB.w;
     double midWorldY = static_cast<double>(playerHB.y) + static_cast<double>(playerHB.h) / 2.0;
 
-    // --- VERTICAL COLLISION ---
-    if (velocity.y >= 0) { // Kiểm tra va chạm dưới chân khi rơi hoặc đứng yên
-        int tileBelowRow = static_cast<int>(floor(feetWorldY / currentTileHeight));
-        int tileBelowType = getTileAt(midWorldX, feetWorldY + 1.0); // Kiểm tra ngay dưới chân
-        bool ignoreCollision = (currentState == PlayerState::DROPPING && tileBelowType == TILE_GRASS);
-
-        if (!ignoreCollision && (tileBelowType == TILE_GRASS || tileBelowType == TILE_UNKNOWN_SOLID)) {
-            double tileTopY = static_cast<double>(tileBelowRow * currentTileHeight);
-            if (feetWorldY >= tileTopY) { // Chỉ xử lý nếu chân đã đi vào hoặc chạm tile
-                isOnGround = true; // Đặt là đang trên đất
-                if (isInWaterState) { isInWaterState = false; } // Thoát nước nếu chạm đất
-                velocity.y = 0.0; // Dừng rơi
-                // Điều chỉnh vị trí Y
-                posRef.y = tileTopY - static_cast<double>(hitbox.h) - static_cast<double>(hitbox.y);
-                // Nếu đang DROPPING mà chạm đất, updateState sẽ xử lý chuyển sang IDLE/RUNNING
-            }
-        } else if (tileBelowType == TILE_WATER_SURFACE && !isInWaterState) { // Va chạm mặt nước
-            double waterTileTopY = static_cast<double>(tileBelowRow * currentTileHeight);
-            if (midWorldY > waterTileTopY) { // Vào nước khi phần lớn cơ thể chìm
-                isOnGround = false; isInWaterState = true; currentState = PlayerState::ENTERING_WATER;
-                velocity.y *= 0.3; waterSurfaceY = waterTileTopY;
-                posRef.y = waterSurfaceY - static_cast<double>(hitbox.h) * 0.8; // Chìm một phần
-                currentAnimFrameIndex = 0;
-            }
+    // --- 1. KIỂM TRA VÀ XỬ LÝ CHẠM ĐÁY (ROW 6) TRƯỚC TIÊN ---
+    double bottomBoundaryY = static_cast<double>((BOTTOM_ROW_INDEX + 1) * currentTileHeight);
+    if (feetWorldY >= bottomBoundaryY) {
+        // Lấy loại tile ở đáy
+        int bottomTileCol = static_cast<int>(floor(midWorldX / currentTileWidth));
+        int bottomTileType = TILE_EMPTY;
+        if (BOTTOM_ROW_INDEX >= 0 && BOTTOM_ROW_INDEX < currentMapRows && bottomTileCol >= 0 && bottomTileCol < (*currentMapData)[BOTTOM_ROW_INDEX].size()) {
+            bottomTileType = (*currentMapData)[BOTTOM_ROW_INDEX][bottomTileCol];
         }
-        // Nếu không va chạm gì bên dưới, isOnGround vẫn là false
-    } else { // Đang bay lên (velocity.y < 0)
-        isOnGround = false; // Chắc chắn không trên mặt đất
-    }
 
-    // Ceiling check (va chạm trần)
-    if (velocity.y < 0 && !isInWaterState) {
-        int tileAboveType = getTileAt(midWorldX, headWorldY);
-        if (tileAboveType == TILE_GRASS || tileAboveType == TILE_UNKNOWN_SOLID) {
-            velocity.y = 0.0; // Dừng bay lên
-            int tileRow = static_cast<int>(floor(headWorldY / currentTileHeight));
-            posRef.y = static_cast<double>((tileRow + 1) * currentTileHeight) - static_cast<double>(hitbox.y); // Đặt ngay dưới trần
+        // Kẹp vị trí Y
+        posRef.y = bottomBoundaryY - static_cast<double>(hitbox.h) - static_cast<double>(hitbox.y);
+        feetWorldY = bottomBoundaryY; // Cập nhật Y chân
+        velocity.y = 0; // Dừng rơi
+
+        // Xử lý trạng thái tại đáy
+        if (bottomTileType == TILE_WATER_SURFACE) {
+             if (!isInWaterState) { // Nếu chưa ở trong nước -> vào nước
+                 isOnGround = false;
+                 isInWaterState = true;
+                 // Đặt state ENTERING_WATER ở đây để anim vào nước chạy
+                 currentState = PlayerState::ENTERING_WATER;
+                 waterSurfaceY = static_cast<double>(BOTTOM_ROW_INDEX * currentTileHeight);
+                 currentAnimFrameIndex = 0;
+                 // cout << "[DEBUG] Entered Water AT BOTTOM." << endl;
+             } else { // Đã ở trong nước rồi, chạm đáy nước -> vẫn bơi
+                 isOnGround = false; // Không đứng trên đất
+                 // cout << "[DEBUG] Hit water bottom while already swimming." << endl;
+             }
+        } else { // Đáy là rắn hoặc rỗng
+            isOnGround = true; // Đứng trên đáy
+            if (isInWaterState) { // Nếu đang bơi mà chạm đáy rắn -> thoát nước
+                isInWaterState = false;
+                // cout << "[DEBUG] Exited water hitting solid bottom." << endl;
+            } else {
+                 // cout << "[DEBUG] Hit solid/empty bottom." << endl;
+            }
+            // Đã xử lý va chạm dọc với đáy rắn -> không cần kiểm tra sàn/nước thông thường nữa
+            goto HorizontalCollisionCheck; // Nhảy tới kiểm tra ngang
         }
+        // Nếu đã xử lý vào nước ở đáy, không cần goto, để kiểm tra ngang chạy
+        // Nếu chạm đáy nước khi đã ở trong nước, cũng không cần goto
     }
+     // --- Nếu không chạm đáy ---
+     else {
+         // Reset trạng thái nền tảng trước khi kiểm tra va chạm thông thường
+         isOnGround = false;
+         // isInWaterState giữ nguyên giá trị từ frame trước
 
-    // --- HORIZONTAL COLLISION --- (va chạm tường)
-    if (!isInWaterState) {
+         // 2. KIỂM TRA VA CHẠM DỌC THÔNG THƯỜNG (TRẦN, SÀN/NƯỚC KHÁC)
+         // 2.1 Va chạm trần (Khi bay lên và không trong nước)
+         if (velocity.y < 0 && !isInWaterState) {
+             int tileAboveRow = static_cast<int>(floor(headWorldY / currentTileHeight));
+             int tileAboveCol = static_cast<int>(floor(midWorldX / currentTileWidth));
+             if (tileAboveRow >= 0 && tileAboveRow < currentMapRows && tileAboveCol >= 0 && tileAboveCol < currentMapCols) {
+                if (tileAboveCol < (*currentMapData)[tileAboveRow].size()) { // Kiểm tra biên cột
+                    int tileAboveType = (*currentMapData)[tileAboveRow][tileAboveCol];
+                    if (tileAboveType == TILE_UNKNOWN_SOLID) { // Chỉ chặn bởi SOLID(2)
+                        double ceilingY = static_cast<double>((tileAboveRow + 1) * currentTileHeight);
+                        if (headWorldY <= ceilingY) {
+                            velocity.y = 50.0; // Đẩy nhẹ xuống
+                            posRef.y = ceilingY - static_cast<double>(hitbox.y);
+                        }
+                    }
+                }
+             }
+         }
+         // 2.2 Va chạm sàn/nước thông thường (Khi rơi/đứng yên và chưa vào nước)
+         else if (velocity.y >= 0 && !isInWaterState) {
+             int playerFeetRow = static_cast<int>(floor(feetWorldY / currentTileHeight));
+             // Row đã được đảm bảo < BOTTOM_ROW_INDEX do kiểm tra chạm đáy ở trên
+
+             int playerMidCol = static_cast<int>(floor(midWorldX / currentTileWidth));
+             int targetRow = playerFeetRow;
+             int landingTileType = TILE_EMPTY;
+             double targetTileTopY = 0.0;
+             bool foundLandingSpot = false;
+             bool tileIsDisabled = false;
+
+             // Kiểm tra ô đích
+             if (targetRow >= 0 && targetRow < currentMapRows && playerMidCol >= 0 && playerMidCol < currentMapCols) {
+                 if (playerMidCol < (*currentMapData)[targetRow].size()) { // Kiểm tra biên cột
+                    landingTileType = (*currentMapData)[targetRow][playerMidCol];
+                    targetTileTopY = static_cast<double>(targetRow * currentTileHeight);
+                    tileIsDisabled = temporarilyDisabledTiles.count({targetRow, playerMidCol}) > 0;
+
+                    if (!tileIsDisabled && (landingTileType == TILE_GRASS || landingTileType == TILE_UNKNOWN_SOLID || landingTileType == TILE_WATER_SURFACE)) {
+                        foundLandingSpot = true;
+                    }
+                 }
+             }
+
+             // Xử lý chạm điểm đáp
+             if (foundLandingSpot && feetWorldY >= targetTileTopY) {
+                  // A. Hạ cánh trên đất
+                  if (landingTileType == TILE_GRASS || landingTileType == TILE_UNKNOWN_SOLID) {
+                     isOnGround = true; // Đặt trạng thái đứng trên đất
+                     velocity.y = 0;
+                     posRef.y = targetTileTopY - static_cast<double>(hitbox.h) - static_cast<double>(hitbox.y);
+                      // cout << "[DEBUG] Landed on Ground (Normal). Row: " << targetRow << endl;
+                  }
+                  // B. Vào nước (không phải ở đáy)
+                  else if (landingTileType == TILE_WATER_SURFACE) {
+                      if (midWorldY > targetTileTopY) { // Đủ sâu mới vào
+                          isOnGround = false;
+                          isInWaterState = true; // Đặt trạng thái trong nước
+                          currentState = PlayerState::ENTERING_WATER;
+                          velocity.y *= 0.3; // Giảm tốc rơi
+                          waterSurfaceY = targetTileTopY;
+                          posRef.y = waterSurfaceY - static_cast<double>(hitbox.h) * 0.8; // Chìm 1 phần
+                          currentAnimFrameIndex = 0;
+                          // cout << "[DEBUG] Entered Water (Normal). Row: " << targetRow << endl;
+                      }
+                      // else: chạm nhẹ, không làm gì, isOnGround vẫn là false
+                  }
+             }
+             // Nếu không foundLandingSpot hoặc chưa chạm, isOnGround vẫn là false
+         }
+          // Nếu đang ở trong nước và không chạm đáy, không cần kiểm tra va chạm sàn/nước khác
+         else if (isInWaterState) {
+              isOnGround = false; // Đảm bảo không đứng trên đất khi đang bơi (trừ khi chạm đáy rắn)
+         }
+     } // Kết thúc else (không chạm đáy)
+
+
+// --- 3. KIỂM TRA VA CHẠM NGANG ---
+HorizontalCollisionCheck: // Nhãn goto từ xử lý đáy rắn
+    if (!isInWaterState) { // Chỉ kiểm tra va chạm tường khi không ở trong nước
+        playerHB = getWorldHitbox(); // Lấy lại hitbox vì Y có thể đã thay đổi
+        leftWorldX = static_cast<double>(playerHB.x);
+        rightWorldX = static_cast<double>(playerHB.x) + playerHB.w;
+        midWorldY = static_cast<double>(playerHB.y) + static_cast<double>(playerHB.h) / 2.0;
+
         if (velocity.x > 0) { // Đi sang phải
-            int tileRightType = getTileAt(rightWorldX, midWorldY);
-            if (tileRightType == TILE_GRASS || tileRightType == TILE_UNKNOWN_SOLID) {
-                velocity.x = 0.0; // Dừng lại
-                int tileCol = static_cast<int>(floor(rightWorldX / currentTileWidth));
-                posRef.x = static_cast<double>(tileCol * currentTileWidth) - static_cast<double>(hitbox.w) - static_cast<double>(hitbox.x) - 0.1; // Đặt sát tường trái
+            int row = static_cast<int>(floor(midWorldY / currentTileHeight));
+            int col = static_cast<int>(floor(rightWorldX / currentTileWidth));
+            if (row >= 0 && row < currentMapRows && col >= 0 && col < currentMapCols) {
+                if (col < (*currentMapData)[row].size()) { // Kiểm tra biên cột
+                    if ((*currentMapData)[row][col] == TILE_UNKNOWN_SOLID) { // Chỉ chặn bởi SOLID (2)
+                        double wallX = static_cast<double>(col * currentTileWidth);
+                        if (rightWorldX >= wallX) { velocity.x = 0.0; posRef.x = wallX - hitbox.w - hitbox.x - 0.1; }
+                    }
+                }
             }
         } else if (velocity.x < 0) { // Đi sang trái
-            int tileLeftType = getTileAt(leftWorldX, midWorldY);
-            if (tileLeftType == TILE_GRASS || tileLeftType == TILE_UNKNOWN_SOLID) {
-                velocity.x = 0.0; // Dừng lại
-                int tileCol = static_cast<int>(floor(leftWorldX / currentTileWidth));
-                posRef.x = static_cast<double>((tileCol + 1) * currentTileWidth) - static_cast<double>(hitbox.x) + 0.1; // Đặt sát tường phải
-            }
+             int row = static_cast<int>(floor(midWorldY / currentTileHeight));
+             int col = static_cast<int>(floor(leftWorldX / currentTileWidth));
+             if (row >= 0 && row < currentMapRows && col >= 0 && col < currentMapCols) {
+                 if (col < (*currentMapData)[row].size()) { // Kiểm tra biên cột
+                    if ((*currentMapData)[row][col] == TILE_UNKNOWN_SOLID) { // Chỉ chặn bởi SOLID (2)
+                        double wallX = static_cast<double>((col + 1) * currentTileWidth);
+                        if (leftWorldX <= wallX) { velocity.x = 0.0; posRef.x = wallX - hitbox.x + 0.1; }
+                    }
+                 }
+             }
         }
-    }
+    } // Kết thúc kiểm tra va chạm ngang
 
-    // --- CHECK EXIT WATER --- (Kiểm tra thoát khỏi nước)
+// --- 4. KIỂM TRA THOÁT NƯỚC LÊN TRÊN ---
     if (isInWaterState) {
-        int tileAtHead = getTileAt(midWorldX, headWorldY - 1.0); // Tile ngay trên đầu
-        // Thoát nước nếu đầu vượt lên trên mặt nước và ô trên đầu là không khí
-        if (tileAtHead == TILE_EMPTY && headWorldY < waterSurfaceY ) {
-            isInWaterState = false;
-            // Trọng lực sẽ xử lý việc rơi xuống nếu không nhảy tiếp
+        headWorldY = static_cast<double>(getWorldHitbox().y);
+        midWorldX = static_cast<double>(getWorldHitbox().x) + static_cast<double>(getWorldHitbox().w) / 2.0;
+
+        int tileAboveRow = static_cast<int>(floor((headWorldY - 1.0) / currentTileHeight));
+        int tileAboveCol = static_cast<int>(floor(midWorldX / currentTileWidth));
+
+        if (tileAboveRow >= 0 && tileAboveRow < currentMapRows && tileAboveCol >= 0 && tileAboveCol < currentMapCols) {
+             if (tileAboveCol < (*currentMapData)[tileAboveRow].size()) { // Kiểm tra biên cột
+                 int tileAtHead = (*currentMapData)[tileAboveRow][tileAboveCol];
+                 // Thoát nước nếu đầu trên mặt nước VÀ ô trên đầu là không khí
+                 if (headWorldY < waterSurfaceY && tileAtHead == TILE_EMPTY) {
+                     isInWaterState = false;
+                     // cout << "[DEBUG] Exited water upwards." << endl;
+                 }
+             }
         }
-        // Thoát nước khi chạm đất đã được xử lý ở va chạm dọc
+        // Thoát nước khi chạm đáy rắn đã xử lý ở phần 1
+    }
+}
+
+
+// --- Restore Disabled Tiles ---
+void Player::restoreDisabledTiles() {
+    if (temporarilyDisabledTiles.empty()) return;
+    SDL_Rect playerHB = getWorldHitbox();
+    double feetWorldY = static_cast<double>(playerHB.y + playerHB.h);
+    for (auto it = temporarilyDisabledTiles.begin(); it != temporarilyDisabledTiles.end(); ) {
+        int disabledRow = it->first;
+        double tileBottomY = static_cast<double>((disabledRow + 1) * currentTileHeight);
+        if (feetWorldY >= tileBottomY + 1.0) { // Khôi phục khi chân đã qua hẳn
+            it = temporarilyDisabledTiles.erase(it);
+        } else {
+            ++it;
+        }
     }
 }
 
 
 // --- Update State ---
-// <<< LOGIC CẬP NHẬT TRẠNG THÁI ĐÃ SỬA ĐỂ ƯU TIÊN BẮN VÀ THÊM RUN_SHOOTING_HORIZ >>>
 void Player::updateState() {
     PlayerState previousState = currentState;
 
-    // Xử lý trạng thái dựa trên các yếu tố: trong nước, trên không, trên đất, có đang giữ bắn không
-
-    if (isInWaterState) {
-        // Ưu tiên trạng thái vào nước nếu animation chưa xong
+    if (isInWaterState) { // Đang trong nước
+        // Nếu đang vào nước, chờ animation xong hoặc bị đẩy lên
         if (currentState == PlayerState::ENTERING_WATER) {
-             if (currentAnimFrameIndex >= ENTER_WATER_FRAMES - 1) {
-                 currentState = PlayerState::SWIMMING; // Chuyển sang bơi khi anim xong
-             }
-             // else: Giữ nguyên ENTERING_WATER
-        } else {
-             // Có thể phân biệt WATER_JUMP dựa vào velocity.y nếu cần
-             currentState = PlayerState::SWIMMING; // Mặc định là bơi
+            if (velocity.y < -10.0) { currentState = PlayerState::WATER_JUMP; }
+            // Nếu anim xong, updateAnimation sẽ chuyển sang SWIMMING
+        } else { // Đã ở trong nước
+            currentState = (velocity.y < -10.0) ? PlayerState::WATER_JUMP : PlayerState::SWIMMING;
         }
-    }
-    else if (!isOnGround) { // --- Đang ở trên không ---
-        // Ưu tiên trạng thái bắn nếu đang giữ phím bắn
-        if (isShootingHeld) {
-            // Bắn lên có ưu tiên cao nhất khi ở trên không
-            if (shootUpHeld) {
-                currentState = PlayerState::SHOOTING_UP;
-            } else {
-                // Nếu không bắn lên, dùng animation bắn ngang (như đứng yên) khi ở trên không
-                currentState = PlayerState::SHOOTING_HORIZ;
-            }
-        }
-        // Nếu không giữ bắn, xác định là nhảy hay rơi
-        else {
-            // Kiểm tra nếu đang rơi qua platform
+    } else { // Không ở trong nước
+        if (!isOnGround) { // Đang trên không
             if (currentState == PlayerState::DROPPING) {
-                 // Giữ nguyên DROPPING cho đến khi chạm đất (checkMapCollision sẽ xử lý)
-                 // Hoặc nếu vận tốc y < 0 (ví dụ nhảy lên ngay sau khi rơi) thì chuyển sang JUMPING
-                 if(velocity.y < 0) currentState = PlayerState::JUMPING;
+                if (velocity.y < 0) { currentState = PlayerState::JUMPING; }
+                 // Khi chạm đất, isOnGround=true, code dưới xử lý
+            } else if (isShootingHeld) {
+                currentState = shootUpHeld ? PlayerState::SHOOTING_UP : PlayerState::SHOOTING_HORIZ;
             } else {
-                 // Nếu không phải DROPPING, xác định dựa trên vận tốc dọc
-                 currentState = (velocity.y < 0) ? PlayerState::JUMPING : PlayerState::FALLING;
+                currentState = (velocity.y < 0) ? PlayerState::JUMPING : PlayerState::FALLING;
             }
-        }
-    }
-    else { // --- Đang ở trên mặt đất ---
-        // Ưu tiên trạng thái bắn nếu đang giữ phím bắn
-        if (isShootingHeld) {
-            // Bắn lên có ưu tiên cao nhất
-            if (shootUpHeld) {
-                currentState = PlayerState::SHOOTING_UP;
+        } else { // Đang trên mặt đất (isOnGround = true)
+             // Nếu vừa mới chạm đất từ trên không
+            if (previousState == PlayerState::FALLING || previousState == PlayerState::JUMPING || previousState == PlayerState::DROPPING) {
+                 currentState = (abs(velocity.x) > 0.1) ? PlayerState::RUNNING : PlayerState::IDLE;
             }
-            // Nếu không bắn lên, kiểm tra có đang chạy không
-            else if (velocity.x != 0) {
-                currentState = PlayerState::RUN_SHOOTING_HORIZ; // <<< Trạng thái chạy và bắn
-            }
-            // Nếu không bắn lên và không chạy -> đứng yên bắn
-            else {
-                currentState = PlayerState::SHOOTING_HORIZ;
-            }
-        }
-        // Nếu không giữ bắn, xác định là chạy hay đứng yên
-        else {
-            if (velocity.x != 0) {
-                currentState = PlayerState::RUNNING;
-            } else {
-                currentState = PlayerState::IDLE;
+            // Nếu đã ở trên đất từ trước
+            else if (isShootingHeld) {
+                if (shootUpHeld) { currentState = PlayerState::SHOOTING_UP; }
+                else if (abs(velocity.x) > 0.1) { currentState = PlayerState::RUN_SHOOTING_HORIZ; }
+                else { currentState = PlayerState::SHOOTING_HORIZ; }
+            } else { // Không bắn
+                if (abs(velocity.x) > 0.1 && currentState != PlayerState::RUNNING) {
+                    currentState = PlayerState::RUNNING;
+                } else if (abs(velocity.x) <= 0.1 && currentState != PlayerState::IDLE) {
+                    currentState = PlayerState::IDLE;
+                }
             }
         }
     }
 
     // Reset animation nếu state thay đổi
     if (currentState != previousState) {
-         // cout << "[DEBUG] updateState: State Changed from " << static_cast<int>(previousState) << " to " << static_cast<int>(currentState) << ". Resetting animation." << endl; // Debug log
-        animTimer = 0.0;
-        currentAnimFrameIndex = 0; // Luôn reset frame index khi thay đổi state
+        bool shouldReset = true;
+        // Ngoại lệ: Không reset ngay khi anim vào nước chưa xong
+        if (previousState == PlayerState::ENTERING_WATER && currentState == PlayerState::SWIMMING) {
+             shouldReset = false;
+        }
+         // Ngoại lệ: Không reset ngay khi vừa chạm đất
+        if ((previousState == PlayerState::FALLING || previousState == PlayerState::JUMPING || previousState == PlayerState::DROPPING) && isOnGround) {
+             shouldReset = false;
+        }
+
+        if(shouldReset){
+             animTimer = 0.0;
+             currentAnimFrameIndex = 0;
+        }
     }
 }
 
+
 // --- Get Tile At ---
-// Giữ nguyên logic
 int Player::getTileAt(double worldX, double worldY) const {
     if (!currentMapData || worldX < 0 || worldY < 0 || currentTileWidth <= 0 || currentTileHeight <= 0) return TILE_EMPTY;
     int col = static_cast<int>(floor(worldX / currentTileWidth));
     int row = static_cast<int>(floor(worldY / currentTileHeight));
-    if (row >= 0 && row < currentMapData->size()) {
-        const auto& rowData = (*currentMapData)[row];
-        if (col >= 0 && col < rowData.size()) { return rowData[col]; }
+    if (row >= 0 && row < currentMapRows) {
+        // Kiểm tra biên cột trước khi truy cập
+        if (col >= 0 && col < (*currentMapData)[row].size()) {
+            return (*currentMapData)[row][col];
+        }
     }
     return TILE_EMPTY;
 }
 
 // --- Update Animation ---
-// <<< THÊM CASE CHO RUN_SHOOTING_HORIZ >>>
 void Player::updateAnimation(double dt) {
-    animTimer += dt; // Tăng bộ đếm thời gian
-
-    // Nếu đủ thời gian để chuyển frame
+    animTimer += dt;
     if (animTimer >= ANIM_SPEED) {
-        animTimer -= ANIM_SPEED; // Reset timer
+        animTimer -= ANIM_SPEED;
+        int sheetCols = 1, numFrames = 1;
+        bool loopAnim = true;
+        SDL_Texture* currentTexture = runTexture;
 
-        int sheetCols = runSheetColumns; // Mặc định
-        int numFrames = 1;               // Mặc định
-        bool loopAnim = true;            // Mặc định
-
-        // Xác định thông số animation dựa trên trạng thái hiện tại
+        // Xác định thông số dựa trên state hiện tại
         switch(currentState) {
-            case PlayerState::IDLE:
-                sheetCols = runSheetColumns; numFrames = 1; currentAnimFrameIndex = 0; loopAnim = true; // IDLE chỉ có 1 frame
-                break;
-            case PlayerState::RUNNING:
-                sheetCols = runSheetColumns; numFrames = RUN_FRAMES; loopAnim = true;
-                break;
-            case PlayerState::JUMPING: case PlayerState::FALLING: case PlayerState::DROPPING:
-                sheetCols = jumpSheetColumns; numFrames = JUMP_FRAMES; loopAnim = false; // Nhảy/rơi không lặp
-                break;
-            case PlayerState::ENTERING_WATER:
-                sheetCols = enterWaterSheetColumns; numFrames = ENTER_WATER_FRAMES; loopAnim = false; // Vào nước không lặp
-                break;
-            case PlayerState::SWIMMING: case PlayerState::WATER_JUMP:
-                sheetCols = swimSheetColumns; numFrames = SWIM_FRAMES; loopAnim = true; // Bơi lặp lại
-                break;
-            case PlayerState::SHOOTING_HORIZ: // Bắn ngang khi đứng yên / trên không
-                sheetCols = shootHorizSheetColumns; numFrames = SHOOT_HORIZ_FRAMES; loopAnim = false; // Bắn thường không lặp
-                break;
-            case PlayerState::SHOOTING_UP:
-                sheetCols = shootUpSheetColumns; numFrames = SHOOT_UP_FRAMES; loopAnim = false; // Bắn lên không lặp
-                break;
-            case PlayerState::RUN_SHOOTING_HORIZ: // <<< CASE MỚI CHO CHẠY BẮN
-                sheetCols = runShootHorizSheetColumns; numFrames = RUN_SHOOT_HORIZ_FRAMES; loopAnim = true; // Chạy bắn lặp lại
-                break;
+            case PlayerState::IDLE: sheetCols = runSheetColumns; numFrames = 1; currentAnimFrameIndex = 0; loopAnim = true; currentTexture = runTexture; break;
+            case PlayerState::RUNNING: sheetCols = runSheetColumns; numFrames = RUN_FRAMES; loopAnim = true; currentTexture = runTexture; break;
+            case PlayerState::JUMPING: case PlayerState::FALLING: case PlayerState::DROPPING: sheetCols = jumpSheetColumns; numFrames = JUMP_FRAMES; loopAnim = false; currentTexture = jumpTexture; break;
+            case PlayerState::ENTERING_WATER: sheetCols = enterWaterSheetColumns; numFrames = ENTER_WATER_FRAMES; loopAnim = false; currentTexture = enterWaterTexture; break;
+            case PlayerState::SWIMMING: case PlayerState::WATER_JUMP: sheetCols = swimSheetColumns; numFrames = SWIM_FRAMES; loopAnim = true; currentTexture = swimTexture; break;
+            case PlayerState::SHOOTING_HORIZ: sheetCols = shootHorizSheetColumns; numFrames = SHOOT_HORIZ_FRAMES; loopAnim = false; currentTexture = shootHorizTexture; break;
+            case PlayerState::SHOOTING_UP: sheetCols = shootUpSheetColumns; numFrames = SHOOT_UP_FRAMES; loopAnim = false; currentTexture = shootUpTexture; break;
+            case PlayerState::RUN_SHOOTING_HORIZ: sheetCols = runShootHorizSheetColumns; numFrames = RUN_SHOOT_HORIZ_FRAMES; loopAnim = true; currentTexture = runShootHorizTexture; break;
         }
 
-        // Cập nhật frame index (chỉ khi state không phải IDLE)
+        // Cập nhật frame index
         if (currentState != PlayerState::IDLE) {
             if (loopAnim) {
-                // Animation lặp lại: tăng frame và quay về 0 nếu vượt quá
                 currentAnimFrameIndex = (currentAnimFrameIndex + 1) % numFrames;
-            } else {
-                // Animation không lặp: chỉ tăng nếu chưa phải frame cuối
+            } else { // Animation không lặp
                 if (currentAnimFrameIndex < numFrames - 1) {
                     currentAnimFrameIndex++;
                 }
-                // Nếu đã là frame cuối thì giữ nguyên frame đó
+                // Tự động chuyển sang SWIMMING khi ENTERING_WATER xong
+                else if (currentState == PlayerState::ENTERING_WATER) {
+                    // Chỉ chuyển nếu state vẫn là ENTERING_WATER (tránh ghi đè nếu đã nhảy ra)
+                    if (currentState == PlayerState::ENTERING_WATER) {
+                        currentState = PlayerState::SWIMMING;
+                        // cout << "[DEBUG] Animation finished, switching to SWIMMING" << endl;
+                        // Animation sẽ tự đổi sang SWIMMING ở lần update tiếp theo
+                        // Không cần reset frame ở đây vì SWIMMING là anim lặp
+                    }
+                }
+                // Giữ nguyên frame cuối cho các anim không lặp khác
             }
         }
-        // else: IDLE luôn giữ frame 0 đã được set trong switch-case
 
-        // Tính toán tọa độ sourceRect dựa trên frame index mới
-        currentSourceRect.x = (currentAnimFrameIndex % sheetCols) * frameWidth;
-        currentSourceRect.y = (currentAnimFrameIndex / sheetCols) * frameHeight;
-        currentSourceRect.w = frameWidth; // Giữ nguyên kích thước frame
-        currentSourceRect.h = frameHeight;
+        // Tính toán sourceRect
+        if (currentTexture) {
+            int texW = 0; SDL_QueryTexture(currentTexture, NULL, NULL, &texW, NULL);
+            int actualSheetCols = (frameWidth > 0 && texW > 0) ? (texW / frameWidth) : sheetCols;
+            if (actualSheetCols <= 0) actualSheetCols = 1;
+            currentSourceRect.x = (currentAnimFrameIndex % actualSheetCols) * frameWidth;
+            currentSourceRect.y = (numFrames > actualSheetCols && actualSheetCols > 0) ? ((currentAnimFrameIndex / actualSheetCols) * frameHeight) : 0;
+            currentSourceRect.w = frameWidth; currentSourceRect.h = frameHeight;
+        } else { currentSourceRect = {0, 0, frameWidth, frameHeight}; }
     }
-     // Nếu không đủ thời gian chuyển frame, không làm gì cả, giữ nguyên frame cũ và sourceRect
 }
 
 
 // --- Render ---
-// <<< THÊM CASE ĐỂ CHỌN TEXTURE RUN_SHOOTING_HORIZ >>>
 void Player::render(RenderWindow& window, double cameraX, double cameraY) {
-    SDL_Texture* textureToRender = runTexture; // Texture mặc định
-
-    // Chọn texture phù hợp với trạng thái hiện tại
+    SDL_Texture* textureToRender = runTexture;
     switch(currentState) {
-        // Các state cũ giữ nguyên
         case PlayerState::JUMPING: case PlayerState::FALLING: case PlayerState::DROPPING: textureToRender = jumpTexture; break;
         case PlayerState::ENTERING_WATER: textureToRender = enterWaterTexture; break;
         case PlayerState::SWIMMING: case PlayerState::WATER_JUMP: textureToRender = swimTexture; break;
-        case PlayerState::SHOOTING_HORIZ: textureToRender = shootHorizTexture; break; // Bắn đứng yên / trên không
+        case PlayerState::SHOOTING_HORIZ: textureToRender = shootHorizTexture; break;
         case PlayerState::SHOOTING_UP: textureToRender = shootUpTexture; break;
-
-        // State mới
-        case PlayerState::RUN_SHOOTING_HORIZ: textureToRender = runShootHorizTexture; break; // <<< Chọn texture chạy bắn
-
-        // State mặc định
-        case PlayerState::IDLE: case PlayerState::RUNNING: default: textureToRender = runTexture; break;
+        case PlayerState::RUN_SHOOTING_HORIZ: textureToRender = runShootHorizTexture; break;
+        default: textureToRender = runTexture; break;
     }
 
-    // Kiểm tra texture null
     if (!textureToRender) {
         cerr << "Error: Texture is NULL for state " << static_cast<int>(currentState) << endl;
-        // Có thể vẽ hình báo lỗi thay vì return
+        SDL_Rect errorRect = { static_cast<int>(round(getPos().x - cameraX)), static_cast<int>(round(getPos().y - cameraY)), frameWidth, frameHeight };
+        SDL_SetRenderDrawColor(window.getRenderer(), 255, 0, 0, 255);
+        SDL_RenderFillRect(window.getRenderer(), &errorRect);
         return;
     }
 
-    // Tính toán destination rectangle (vị trí vẽ trên màn hình)
     SDL_Rect destRect = {
         static_cast<int>(round(getPos().x - cameraX)),
         static_cast<int>(round(getPos().y - cameraY)),
-        currentSourceRect.w, // Kích thước vẽ lấy từ source rect
-        currentSourceRect.h
-    };
+        currentSourceRect.w, currentSourceRect.h };
 
-    // Xác định hướng flip (lật hình)
-    // Không lật hình khi bắn lên
-    SDL_RendererFlip flip = (facing == FacingDirection::LEFT && currentState != PlayerState::SHOOTING_UP)
-                              ? SDL_FLIP_HORIZONTAL
-                              : SDL_FLIP_NONE;
-
-    // Vẽ sprite lên màn hình
+    SDL_RendererFlip flip = (facing == FacingDirection::LEFT && currentState != PlayerState::SHOOTING_UP) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
     SDL_RenderCopyEx(window.getRenderer(), textureToRender, &currentSourceRect, &destRect, 0.0, NULL, flip);
 
-    /* // Optional: Vẽ hitbox để debug
-    SDL_SetRenderDrawColor(window.getRenderer(), 255, 0, 0, 150); // Màu đỏ
+    /* // Debug Hitbox
+    SDL_Renderer* renderer = window.getRenderer();
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100);
     SDL_Rect debugHitbox = getWorldHitbox();
     debugHitbox.x = static_cast<int>(round(debugHitbox.x - cameraX));
     debugHitbox.y = static_cast<int>(round(debugHitbox.y - cameraY));
-    SDL_RenderDrawRect(window.getRenderer(), &debugHitbox);
+    SDL_RenderFillRect(renderer, &debugHitbox);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     */
 }
