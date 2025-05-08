@@ -88,7 +88,7 @@ void Bullet::render(RenderWindow& window, double cameraX, double cameraY) {
     destRect.w = DESIRED_BULLET_WIDTH;   // <<< Sử dụng kích thước mong muốn
     destRect.h = DESIRED_BULLET_HEIGHT; // <<< Sử dụng kích thước mong muốn
 
-    // ¤tFrame vẫn chỉ định phần nào của texture gốc sẽ được vẽ (vẫn là toàn bộ texture nếu x,y=0 và w,h=kích thước gốc)
+    // &currentFrame vẫn chỉ định phần nào của texture gốc sẽ được vẽ (vẫn là toàn bộ texture nếu x,y=0 và w,h=kích thước gốc)
     SDL_RenderCopy(window.getRenderer(), tex, &currentFrame, &destRect);
 }
 

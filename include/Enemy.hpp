@@ -1,31 +1,38 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include "math.hpp"
 #include "RenderWindow.hpp"
 #include <vector>
 
-using namespace std;
+extern Mix_Chunk* gEnemyDeathSound;
 
 enum class EnemyState { ALIVE, DYING, DEAD };
 
 class Enemy {
 public:
+    // Constants (khai báo trước)
+    const float ANIM_SPEED = 0.15f;
+    const int NUM_FRAMES_WALK = 6;
+    const float DYING_DURATION = 0.6f;
+    const float BLINK_INTERVAL = 0.1f;
+    const float MOVE_SPEED = 50.0f;
+    const float GRAVITY = 980.0f;
+    const float MAX_FALL_SPEED = 600.0f;
+
     Enemy(vector2d p_pos, SDL_Texture* p_tex);
 
-    void update(double dt, const vector<vector<int>>& mapData, int tileWidth, int tileHeight);
-    void render(RenderWindow& window, double cameraX, double cameraY);
+    void update(float dt, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight);
+    void render(RenderWindow& window, float cameraX, float cameraY);
     SDL_Rect getWorldHitbox() const;
     void takeHit();
     bool isAlive() const;
     bool isDead() const;
     EnemyState getState() const;
 
-    // Hàm này có thể không cần thiết nữa nếu logic va chạm tích hợp vào update
-    // void checkMapCollision(const vector<vector<int>>& mapData, int tileWidth, int tileHeight);
-
-
 private:
+    // Khai báo thành viên theo thứ tự sẽ khởi tạo
     vector2d pos;
     SDL_Texture* tex;
     SDL_Rect currentFrame;
@@ -33,33 +40,19 @@ private:
     int frameHeight;
     int sheetColumns;
     int currentAnimFrameIndex;
-    double animTimer;
+    float animTimer;
 
     EnemyState currentState;
     SDL_Rect hitbox;
 
-    // --- THÊM BIẾN VẬT LÝ ---
-    double velocityY; // Vận tốc dọc
-    bool isOnGround; // Cờ kiểm tra đang trên mặt đất
+    float velocityY;
+    bool isOnGround;
 
-    // Cho hiệu ứng chết
-    double dyingTimer;
+    float dyingTimer;
     bool isVisible;
 
-    // Cho AI di chuyển
     bool movingRight;
 
-    // Hằng số
-    const double ANIM_SPEED = 0.15;
-    const int NUM_FRAMES = 6;
-    const double DYING_DURATION = 0.6;
-    const double BLINK_INTERVAL = 0.1;
-    const double MOVE_SPEED = 50.0; // Tốc độ di chuyển ngang
-    // <<< THÊM HẰNG SỐ VẬT LÝ (có thể dùng chung với Player) >>>
-    const double GRAVITY = 980.0;
-    const double MAX_FALL_SPEED = 600.0;
-
-
-    // Hàm tiện ích lấy tile
-    int getTileAt(double worldX, double worldY, const vector<vector<int>>& mapData, int tileWidth, int tileHeight) const;
+    // Hàm tiện ích
+    int getTileAt(float worldX, float worldY, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight) const;
 };
