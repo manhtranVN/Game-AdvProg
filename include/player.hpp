@@ -42,7 +42,7 @@ public:
     const int STAND_AIM_SHOOT_UP_FRAMES = 2;
     const int STAND_AIM_SHOOT_DIAG_UP_FRAMES = 1; const int RUN_AIM_SHOOT_DIAG_UP_FRAMES = 3;
     const int STAND_AIM_SHOOT_DIAG_DOWN_FRAMES = 1; const int RUN_AIM_SHOOT_DIAG_DOWN_FRAMES = 3;
-    const int LYING_DOWN_FRAMES = 1; const int LYING_AIM_SHOOT_FRAMES = 3;
+    const int LYING_DOWN_FRAMES = 1; const int LYING_AIM_SHOOT_FRAMES = 1;
 
     // Constructor (Đã xóa tham số death texture)
     Player(vector2d p_pos,

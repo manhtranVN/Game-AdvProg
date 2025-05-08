@@ -23,7 +23,7 @@ using namespace std;
 
 // --- Debug Flags ---
 #define DEBUG_DRAW_GRID     // Bật/tắt vẽ lưới tilemap
-// #define DEBUG_DRAW_COLUMNS // Bật/tắt vẽ số cột/tile
+#define DEBUG_DRAW_COLUMNS // Bật/tắt vẽ số cột/tile
 // #define DEBUG_DRAW_PLAYER_HITBOX // Bật/tắt vẽ hitbox player (cần code trong Player::render)
 // #define DEBUG_DRAW_HITBOXES    // Bật/tắt vẽ hitbox turret (cần code trong Turret::render)
 
@@ -39,12 +39,12 @@ const int LOGICAL_TILE_HEIGHT = 96;
 // Tile 4: Turret Spawn, Tile 5: Abyss (death tile)
 vector<vector<int>> mapData = {
     {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-        {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0},
-        {0,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,1,1,0,0},
-        {0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,0},
-        {3,3,3,3,3,3,3,3,1,1,3,3,3,3,3,3,3,3,1,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,3,3,3,3,3,3,3,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1}
+    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0},
+    {0,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,1,1,0,0},
+    {0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,0},
+    {3,3,3,3,3,3,3,3,1,1,3,3,3,3,3,3,3,3,1,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,1,1,3,3,3,3,3,3,3,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1}
 };
 
 // Global sound chunks
@@ -135,16 +135,18 @@ int main(int argc, char* args[]) { // Sử dụng SDL_main nếu cần
     const int PLAYER_STAND_AIM_SHOOT_HORIZ_SHEET_COLS = 3; const int PLAYER_RUN_AIM_SHOOT_HORIZ_SHEET_COLS = 3;
     const int PLAYER_STAND_AIM_SHOOT_UP_SHEET_COLS = 2;
     const int PLAYER_STAND_AIM_SHOOT_DIAG_UP_SHEET_COLS = 1;
-    const int PLAYER_RUN_AIM_SHOOT_DIAG_UP_SHEET_COLS = 3; // <<< SỬA TÊN KHỚP VỚI GỌI CONSTRUCTOR
+    const int PLAYER_RUN_AIM_SHOOT_DIAG_UP_SHEET_COLS = 3;
     const int PLAYER_STAND_AIM_SHOOT_DIAG_DOWN_SHEET_COLS = 1;
-    const int PLAYER_RUN_AIM_SHOOT_DIAG_DOWN_SHEET_COLS = 3; // <<< SỬA TÊN KHỚP VỚI GỌI CONSTRUCTOR
+    const int PLAYER_RUN_AIM_SHOOT_DIAG_DOWN_SHEET_COLS = 3;
     const int PLAYER_LYING_DOWN_SHEET_COLS = 1; const int PLAYER_LYING_AIM_SHOOT_SHEET_COLS = 3;
     // const int PLAYER_DEATH_SHEET_COLS = 4; // Không cần nữa
 
     // --- Game Variables ---
     const float INITIAL_CAMERA_X = 0.0f, INITIAL_CAMERA_Y = 0.0f;
     const float PLAYER_START_X = 100.0f; const float PLAYER_START_Y = 300.0f; // Y đỉnh player khi bắt đầu
-    const float PLAYER_RESPAWN_OFFSET_X = 150.0f; const float PLAYER_RESPAWN_Y_GROUND = 500.0f; // Y mặt đất khu hồi sinh
+    // const float PLAYER_&current_Y_GROUND = 500.0f; // Y mặt đất khu hồi sinh -- KHÔNG DÙNG NỮA, SẼ DÙNG PLAYER_START_Y
+    const float PLAYER_RESPAWN_OFFSET_X = 150.0f;
+
 
     float cameraX = INITIAL_CAMERA_X, cameraY = INITIAL_CAMERA_Y;
     GameState currentGameState = GameState::MAIN_MENU;
@@ -176,8 +178,8 @@ int main(int argc, char* args[]) { // Sử dụng SDL_main nếu cần
                 playerStandAimShootUpTexture, PLAYER_STAND_AIM_SHOOT_UP_SHEET_COLS,
                 playerStandAimShootDiagUpTexture, PLAYER_STAND_AIM_SHOOT_DIAG_UP_SHEET_COLS,
                 playerStandAimShootDiagDownTexture, PLAYER_STAND_AIM_SHOOT_DIAG_DOWN_SHEET_COLS,
-                playerRunAimShootDiagUpTexture, PLAYER_RUN_AIM_SHOOT_DIAG_UP_SHEET_COLS,   // <<< SỬA TÊN HẰNG SỐ
-                playerRunAimShootDiagDownTexture, PLAYER_RUN_AIM_SHOOT_DIAG_DOWN_SHEET_COLS, // <<< SỬA TÊN HẰNG SỐ
+                playerRunAimShootDiagUpTexture, PLAYER_RUN_AIM_SHOOT_DIAG_UP_SHEET_COLS,
+                playerRunAimShootDiagDownTexture, PLAYER_RUN_AIM_SHOOT_DIAG_DOWN_SHEET_COLS,
                 playerStandAimShootHorizTexture, PLAYER_STAND_AIM_SHOOT_HORIZ_SHEET_COLS,
                 playerRunAimShootHorizTexture, PLAYER_RUN_AIM_SHOOT_HORIZ_SHEET_COLS,
                 playerLyingDownTexture, PLAYER_LYING_DOWN_SHEET_COLS,
@@ -242,7 +244,14 @@ int main(int argc, char* args[]) { // Sử dụng SDL_main nếu cần
 
             // Player State Checks
             if (player_ptr && player_ptr->getCurrentState() == PlayerState::DEAD) {
-                if (player_ptr->getLives() > 0) { float respawnY_top = PLAYER_RESPAWN_Y_GROUND - PLAYER_STANDARD_FRAME_H; player_ptr->respawn(cameraX, respawnY_top, PLAYER_RESPAWN_OFFSET_X); }
+                if (player_ptr->getLives() > 0) {
+                    // --- SỬA LỖI &current ---
+                    // player_ptr->&current() sẽ nhận tọa độ X cơ sở (cameraX),
+                    // tọa độ Y trên cùng của player khi &current, và một offset X.
+                    // Sử dụng PLAYER_START_Y làm Y trên cùng để đảm bảo player
+                    // &current ở cùng độ cao ban đầu, tránh rơi vào ô trống.
+                    player_ptr->respawn(cameraX, PLAYER_START_Y, PLAYER_RESPAWN_OFFSET_X);
+                }
                 else { currentGameState = GameState::GAME_OVER; if(isMusicPlaying && Mix_PlayingMusic()) { Mix_HaltMusic(); isMusicPlaying = false; } cout << "--- GAME OVER --- Final Score: " << playerScore << endl; }
             } else if (player_ptr && !player_ptr->getIsDead() && player_ptr->getPos().x + PLAYER_STANDARD_FRAME_W/2.0f >= gameWinConditionX && !gameWonFlag ) {
                  currentGameState = GameState::WON; gameWonFlag = true; if(isMusicPlaying && Mix_PlayingMusic()) { Mix_HaltMusic(); isMusicPlaying = false; } cout << "--- YOU WIN --- Final Score: " << playerScore << endl;
@@ -260,10 +269,9 @@ int main(int argc, char* args[]) { // Sử dụng SDL_main nếu cần
         window.clear();
         switch (currentGameState) {
             case GameState::MAIN_MENU: { /* ... */ SDL_RenderCopy(renderer, menuBackgroundTexture, NULL, NULL); SDL_Color tc={255,255,255,255}; string t="PRESS ENTER TO START"; SDL_Surface* s=TTF_RenderText_Solid(menuFont,t.c_str(),tc); if(s){SDL_Texture* tx=SDL_CreateTextureFromSurface(renderer,s); if(tx){ SDL_Rect d={(SCREEN_WIDTH-s->w)/2, SCREEN_HEIGHT-s->h-80, s->w, s->h}; SDL_RenderCopy(renderer,tx,NULL,&d); SDL_DestroyTexture(tx); } SDL_FreeSurface(s);} } break;
-            case GameState::PLAYING: case GameState::WON: case GameState::GAME_OVER: {
+            case GameState::PLAYING: case GameState::WON: case GameState::GAME_OVER: { // Mở ngoặc cho khối case
                 SDL_Rect bgSrc={static_cast<int>(round(cameraX)), static_cast<int>(round(cameraY)), SCREEN_WIDTH, SCREEN_HEIGHT}; SDL_Rect bgDst={0,0,SCREEN_WIDTH,SCREEN_HEIGHT}; if(backgroundTexture) SDL_RenderCopy(renderer, backgroundTexture, &bgSrc, &bgDst);
 
-                // <<< SỬA LỖI #ifdef - Đặt #endif trên dòng riêng >>>
                 #ifdef DEBUG_DRAW_GRID
                 if (renderer) { /* ... code vẽ grid ... */
                      SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); SDL_SetRenderDrawColor(renderer, 255, 255, 255, 70);
@@ -271,10 +279,50 @@ int main(int argc, char* args[]) { // Sử dụng SDL_main nếu cần
                      for(int c=scg; c<ecg; ++c){ int sx=static_cast<int>(round(c*LOGICAL_TILE_WIDTH-cameraX)); SDL_RenderDrawLine(renderer,sx,0,sx,SCREEN_HEIGHT); }
                      for(int r=0; r<mapRows+1; ++r){ int sy=static_cast<int>(round(r*LOGICAL_TILE_HEIGHT-cameraY)); SDL_RenderDrawLine(renderer,0,sy,SCREEN_WIDTH,sy); }
                 }
-                #endif // DEBUG_DRAW_GRID
+                #endif // DEBUG_DRAW_GRID (Sửa lỗi: #endif trên dòng riêng)
 
-                #ifdef DEBUG_DRAW_COLUMNS
-                if (renderer && debugFont) { /* ... code vẽ columns ... */ }
+                 #ifdef DEBUG_DRAW_COLUMNS
+                if (renderer && debugFont) {
+                    SDL_Color textColor = {255, 255, 0, 255}; // Màu vàng cho dễ thấy
+                    int startCol = static_cast<int>(floor(cameraX / LOGICAL_TILE_WIDTH));
+                    int endCol = startCol + static_cast<int>(ceil(static_cast<float>(SCREEN_WIDTH) / LOGICAL_TILE_WIDTH)) + 1;
+                    endCol = std::min(endCol, mapCols); // Không vẽ ra ngoài map
+
+                    for (int r = 0; r < mapRows; ++r) {
+                        for (int c = startCol; c < endCol; ++c) {
+                            if (c < 0 || c >= mapCols) continue; // Bỏ qua nếu cột ngoài map (do làm tròn cameraX)
+                            if (r < 0 || r >= mapRows) continue; // Thêm kiểm tra cho hàng (an toàn hơn)
+
+
+                            // Tính vị trí trên màn hình
+                            int screenX = static_cast<int>(round(c * LOGICAL_TILE_WIDTH - cameraX));
+                            int screenY = static_cast<int>(round(r * LOGICAL_TILE_HEIGHT - cameraY));
+
+                            // Chỉ vẽ nếu ô nằm trong màn hình (hoặc gần rìa)
+                            if (screenX + LOGICAL_TILE_WIDTH < 0 || screenX > SCREEN_WIDTH ||
+                                screenY + LOGICAL_TILE_HEIGHT < 0 || screenY > SCREEN_HEIGHT) {
+                                continue;
+                            }
+
+                            // Chuẩn bị text hiển thị loại tile
+                            string tileText = std::to_string(mapData[r][c]); // <<< SỬA ĐỔI Ở ĐÂY
+
+                            SDL_Surface* surface = TTF_RenderText_Solid(debugFont, tileText.c_str(), textColor);
+                            if (surface) {
+                                SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+                                if (texture) {
+                                    // Căn giữa text trong ô tile
+                                    int textX = screenX + (LOGICAL_TILE_WIDTH - surface->w) / 2;
+                                    int textY = screenY + (LOGICAL_TILE_HEIGHT - surface->h) / 2;
+                                    SDL_Rect dstRect = {textX, textY, surface->w, surface->h};
+                                    SDL_RenderCopy(renderer, texture, NULL, &dstRect);
+                                    SDL_DestroyTexture(texture);
+                                }
+                                SDL_FreeSurface(surface);
+                            }
+                        }
+                    }
+                }
                 #endif // DEBUG_DRAW_COLUMNS
 
                 // Draw Objects
@@ -291,9 +339,7 @@ int main(int argc, char* args[]) { // Sử dụng SDL_main nếu cần
                 if (isPaused && currentGameState == GameState::PLAYING) { /* ... */ SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); SDL_SetRenderDrawColor(renderer,0,0,0,150); SDL_Rect pO={0,0,SCREEN_WIDTH,SCREEN_HEIGHT}; SDL_RenderFillRect(renderer,&pO); SDL_Color pC={255,255,255,255}; string pT="PAUSED"; SDL_Surface* sP=TTF_RenderText_Solid(menuFont,pT.c_str(),pC); if(sP){SDL_Texture* tP=SDL_CreateTextureFromSurface(renderer,sP); SDL_Rect dP={(SCREEN_WIDTH-sP->w)/2,(SCREEN_HEIGHT-sP->h)/2,sP->w,sP->h}; SDL_RenderCopy(renderer,tP,NULL,&dP); SDL_DestroyTexture(tP); SDL_FreeSurface(sP);} }
                 else if (currentGameState == GameState::WON) { /* ... */ SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); SDL_SetRenderDrawColor(renderer, 0, 180, 0, 170); SDL_Rect r={0,0,SCREEN_WIDTH,SCREEN_HEIGHT}; SDL_RenderFillRect(renderer,&r); SDL_Color c={255,255,0,255}; string t1="YOU WIN!"; string tS="FINAL SCORE: "+std::to_string(playerScore); string t2="Press Enter or ESC"; SDL_Surface* s1=TTF_RenderText_Solid(menuFont,t1.c_str(),c); SDL_Surface* sS=TTF_RenderText_Solid(uiFont,tS.c_str(),c); SDL_Surface* s2=TTF_RenderText_Solid(uiFont,t2.c_str(),c); int yP=SCREEN_HEIGHT/2-(s1?s1->h:0)-(sS?sS->h:0)-15; if(s1){SDL_Texture* tx=SDL_CreateTextureFromSurface(renderer,s1); SDL_Rect d={(SCREEN_WIDTH-s1->w)/2, yP, s1->w,s1->h}; SDL_RenderCopy(renderer,tx,NULL,&d); SDL_DestroyTexture(tx); SDL_FreeSurface(s1); yP+=d.h+5;} if(sS){SDL_Texture* tx=SDL_CreateTextureFromSurface(renderer,sS); SDL_Rect d={(SCREEN_WIDTH-sS->w)/2, yP, sS->w,sS->h}; SDL_RenderCopy(renderer,tx,NULL,&d); SDL_DestroyTexture(tx); SDL_FreeSurface(sS); yP+=d.h+15;} if(s2){SDL_Texture* tx=SDL_CreateTextureFromSurface(renderer,s2); SDL_Rect d={(SCREEN_WIDTH-s2->w)/2, yP, s2->w,s2->h}; SDL_RenderCopy(renderer,tx,NULL,&d); SDL_DestroyTexture(tx); SDL_FreeSurface(s2);} }
                 else if (currentGameState == GameState::GAME_OVER) { /* ... */ SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); SDL_SetRenderDrawColor(renderer, 180, 0, 0, 170); SDL_Rect r={0,0,SCREEN_WIDTH,SCREEN_HEIGHT}; SDL_RenderFillRect(renderer,&r); SDL_Color c={255,255,255,255}; string t1="GAME OVER"; string tS="FINAL SCORE: "+std::to_string(playerScore); string t2="Press Enter or ESC"; SDL_Surface* s1=TTF_RenderText_Solid(menuFont,t1.c_str(),c); SDL_Surface* sS=TTF_RenderText_Solid(uiFont,tS.c_str(),c); SDL_Surface* s2=TTF_RenderText_Solid(uiFont,t2.c_str(),c); int yP=SCREEN_HEIGHT/2-(s1?s1->h:0)-(sS?sS->h:0)-15; if(s1){SDL_Texture* tx=SDL_CreateTextureFromSurface(renderer,s1); SDL_Rect d={(SCREEN_WIDTH-s1->w)/2, yP, s1->w,s1->h}; SDL_RenderCopy(renderer,tx,NULL,&d); SDL_DestroyTexture(tx); SDL_FreeSurface(s1); yP+=d.h+5;} if(sS){SDL_Texture* tx=SDL_CreateTextureFromSurface(renderer,sS); SDL_Rect d={(SCREEN_WIDTH-sS->w)/2, yP, sS->w,sS->h}; SDL_RenderCopy(renderer,tx,NULL,&d); SDL_DestroyTexture(tx); SDL_FreeSurface(sS); yP+=d.h+15;} if(s2){SDL_Texture* tx=SDL_CreateTextureFromSurface(renderer,s2); SDL_Rect d={(SCREEN_WIDTH-s2->w)/2, yP, s2->w,s2->h}; SDL_RenderCopy(renderer,tx,NULL,&d); SDL_DestroyTexture(tx); SDL_FreeSurface(s2);} }
-
-                // <<< SỬA LỖI: Thêm dấu ngoặc nhọn đóng khối case >>>
-            } break; // Kết thúc case PLAYING/WON/GAME_OVER
+            } break; // Sửa lỗi: Kết thúc case PLAYING/WON/GAME_OVER
         } // Kết thúc switch(currentGameState)
         window.display();
 
@@ -315,9 +361,9 @@ int main(int argc, char* args[]) { // Sử dụng SDL_main nếu cần
     SDL_DestroyTexture(menuBackgroundTexture); SDL_DestroyTexture(backgroundTexture); SDL_DestroyTexture(playerRunTexture); SDL_DestroyTexture(playerJumpTexture); SDL_DestroyTexture(playerEnterWaterTexture); SDL_DestroyTexture(playerSwimTexture); SDL_DestroyTexture(playerStandAimShootHorizTexture); SDL_DestroyTexture(playerRunAimShootHorizTexture); SDL_DestroyTexture(playerStandAimShootUpTexture); SDL_DestroyTexture(playerStandAimShootDiagUpTexture); SDL_DestroyTexture(playerRunAimShootDiagUpTexture); SDL_DestroyTexture(playerStandAimShootDiagDownTexture); SDL_DestroyTexture(playerRunAimShootDiagDownTexture); SDL_DestroyTexture(playerLyingDownTexture); SDL_DestroyTexture(playerLyingAimShootTexture); SDL_DestroyTexture(playerBulletTexture); SDL_DestroyTexture(turretBulletTexture); SDL_DestroyTexture(enemyTexture); SDL_DestroyTexture(gameTurretTexture); SDL_DestroyTexture(turretExplosionTexture);
     TTF_CloseFont(uiFont); TTF_CloseFont(menuFont); TTF_CloseFont(debugFont);
 
-    TTF_Quit(); Mix_CloseAudio(); Mix_Quit();
+    TTF_Quit(); Mix_CloseAudio(); Mix_Quit(); // SDL_Mixer đã được đóng bằng Mix_CloseAudio(), Mix_Quit() không cần thiết cho SDL_mixer
     window.cleanUp(); IMG_Quit(); SDL_Quit();
     cout << "Cleanup complete. Exiting." << endl;
-    // <<< SỬA LỖI: Thêm return 0 >>>
-    return 0;
-} // <<< SỬA LỖI: Thêm dấu ngoặc nhọn đóng hàm main >>>
+    
+    return 0; // Sửa lỗi: Thêm return 0
+} // Sửa lỗi: Thêm dấu ngoặc nhọn đóng hàm main
