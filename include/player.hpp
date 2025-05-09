@@ -5,9 +5,12 @@
 #include <utility>
 #include <string>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include "math.hpp"
 
 class RenderWindow; // Forward declaration
+
+extern Mix_Chunk* gPlayerDeathSound;
 
 enum class PlayerState {
     IDLE, RUNNING, JUMPING, FALLING, DROPPING, ENTERING_WATER, SWIMMING, WATER_JUMP,
@@ -22,29 +25,26 @@ public:
     // --- Constants (ĐẦY ĐỦ) ---
     const float GRAVITY = 980.0f; const float MOVE_SPEED = 300.0f;
     const float JUMP_STRENGTH = 600.0f; const float MAX_FALL_SPEED = 600.0f;
-    const float WATER_GRAVITY_MULTIPLIER = 0.3f; const float WATER_MAX_SPEED_MULTIPLIER = 0.5f;
+    // const float WATER_GRAVITY_MULTIPLIER = 0.3f; // BỎ ĐI
+    // const float WATER_MAX_SPEED_MULTIPLIER = 0.5f; // BỎ ĐI
     const float WATER_DRAG_X = 0.85f; const float WATER_JUMP_STRENGTH = 300.0f;
-    // const float KNOCKBACK_FORCE_X = 150.0f; // Đã xóa knockback
-    // const float KNOCKBACK_FORCE_Y = 250.0f; // Đã xóa knockback
     const float BULLET_SPEED = 600.0f;
     const float BULLET_SPEED_DIAG_COMPONENT = BULLET_SPEED * 0.70710678118f;
-    const float ANIM_SPEED = 0.08f; // Tốc độ anim mặc định
-    // const float DEATH_ANIM_SPEED = 0.12f; // Không cần nếu chỉ nhấp nháy
-    // const int DEATH_ANIM_FRAMES = 4;      // Không cần nếu chỉ nhấp nháy
+    const float ANIM_SPEED = 0.08f; 
     const float INVULNERABLE_DURATION = 2.0f;
     const float SHOOT_COOLDOWN = 0.15f;
-    const float DYING_DURATION = 0.8f;    // Thời gian nhấp nháy
-    const float BLINK_INTERVAL = 0.1f;    // Tốc độ nhấp nháy
+    const float DYING_DURATION = 0.8f;    
+    const float BLINK_INTERVAL = 0.1f;    
     // --- Frame counts (ĐẦY ĐỦ) ---
     const int RUN_FRAMES = 6; const int JUMP_FRAMES = 4;
     const int ENTER_WATER_FRAMES = 1; const int SWIM_FRAMES = 5;
-    const int STAND_AIM_SHOOT_HORIZ_FRAMES = 3; const int RUN_AIM_SHOOT_HORIZ_FRAMES = 3;
+    const int STAND_AIM_SHOOT_HORIZ_FRAMES = 1; const int RUN_AIM_SHOOT_HORIZ_FRAMES = 3;
     const int STAND_AIM_SHOOT_UP_FRAMES = 2;
     const int STAND_AIM_SHOOT_DIAG_UP_FRAMES = 1; const int RUN_AIM_SHOOT_DIAG_UP_FRAMES = 3;
     const int STAND_AIM_SHOOT_DIAG_DOWN_FRAMES = 1; const int RUN_AIM_SHOOT_DIAG_DOWN_FRAMES = 3;
     const int LYING_DOWN_FRAMES = 1; const int LYING_AIM_SHOOT_FRAMES = 1;
 
-    // Constructor (Đã xóa tham số death texture)
+    // Constructor 
     Player(vector2d p_pos,
            SDL_Texture* p_runTex, int p_runSheetCols, SDL_Texture* p_jumpTex, int p_jumpSheetCols,
            SDL_Texture* p_enterWaterTex, int p_enterWaterSheetCols, SDL_Texture* p_swimTex, int p_swimSheetCols,
@@ -53,7 +53,6 @@ public:
            SDL_Texture* p_runAimShootDiagDownTex, int p_runAimShootDiagDownSheetCols, SDL_Texture* p_standAimShootHorizTex, int p_standAimShootHorizSheetCols,
            SDL_Texture* p_runAimShootHorizTex, int p_runAimShootHorizSheetCols, SDL_Texture* p_lyingDownTex, int p_lyingDownSheetCols,
            SDL_Texture* p_lyingAimShootTex, int p_lyingAimShootSheetCols,
-           // SDL_Texture* p_deathTex, int p_deathSheetCols, // Đã xóa
            int p_standardFrameW, int p_standardFrameH, int p_lyingFrameW, int p_lyingFrameH);
 
     // Public methods
@@ -99,8 +98,7 @@ private:
     SDL_Texture *runAimShootDiagDownTexture;
     SDL_Texture *lyingDownTexture;
     SDL_Texture *lyingAimShootTexture;
-    // SDL_Texture *deathTexture; // Đã xóa
-
+    
     // --- Sheet Columns (ĐẦY ĐỦ) ---
     int runSheetColumns;
     int jumpSheetColumns;
@@ -115,8 +113,7 @@ private:
     int runAimShootDiagDownSheetColumns;
     int lyingDownSheetColumns;
     int lyingAimShootSheetColumns;
-    // int deathSheetColumns; // Đã xóa
-
+    
     // Frame Dimensions & Animation
     SDL_Rect currentSourceRect;
     int standardFrameWidth, standardFrameHeight;
@@ -141,8 +138,8 @@ private:
     int lives;
     bool invulnerable;
     float invulnerableTimer;
-    bool isVisible;      // Cờ nhấp nháy khi chết
-    float dyingTimer;   // Timer nhấp nháy
+    bool isVisible;      
+    float dyingTimer;   
 
     // Map Data (con trỏ)
     const std::vector<std::vector<int>>* currentMapData;
