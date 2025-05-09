@@ -150,3 +150,4 @@ private:
     void updateCurrentState(); void updatePlayerAnimation(float dt); void restoreDisabledTiles();
     void applyStateBasedMovementRestrictions(); PlayerState determineAimingOrShootingState() const;
 };
+
