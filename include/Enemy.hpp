@@ -12,7 +12,6 @@ enum class EnemyState { ALIVE, DYING, DEAD };
 
 class Enemy {
 public:
-    // Constants (khai báo trước)
     const float ANIM_SPEED = 0.15f;
     const int NUM_FRAMES_WALK = 6;
     const float DYING_DURATION = 0.6f;
@@ -32,7 +31,6 @@ public:
     EnemyState getState() const;
 
 private:
-    // Khai báo thành viên theo thứ tự sẽ khởi tạo
     vector2d pos;
     SDL_Texture* tex;
     SDL_Rect currentFrame;
@@ -53,6 +51,5 @@ private:
 
     bool movingRight;
 
-    // Hàm tiện ích
     int getTileAt(float worldX, float worldY, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight) const;
 };

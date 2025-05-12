@@ -4,13 +4,6 @@
 #include <algorithm>
 #include <iostream> 
 
-// using namespace std; // Bỏ nếu đã bỏ trong .hpp
-
-// --- Định nghĩa các tile rắn (giờ không còn cần thiết cho va chạm đạn với map) ---
-// const int TILE_EMPTY = 0;
-// const int TILE_GRASS = 1;
-// const int TILE_UNKNOWN_SOLID = 2;
-// const int TILE_WATER_SURFACE = 3;
 
 Bullet::Bullet(vector2d p_pos, vector2d p_vel, SDL_Texture* p_tex, int p_renderW, int p_renderH)
     : pos(p_pos), velocity(p_vel), tex(p_tex), active(true), lifeTime(0.0),
@@ -72,10 +65,7 @@ SDL_Rect Bullet::getWorldHitbox() const {
     return worldHB;
 }
 
-// Hàm getTileAt vẫn có thể hữu ích cho các mục đích khác, không nhất thiết phải xóa
-// Nhưng nó không còn được gọi bởi checkMapCollision của Bullet nữa
 int Bullet::getTileAt(double worldX, double worldY, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight) const {
-    // Định nghĩa các hằng số tile ở đây hoặc đảm bảo chúng được include/global
     const int TILE_EMPTY_FOR_GETTILE = 0; 
 
     if (worldX < 0 || worldY < 0 || tileWidth <= 0 || tileHeight <= 0) return TILE_EMPTY_FOR_GETTILE;

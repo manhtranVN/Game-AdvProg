@@ -215,6 +215,32 @@ void Turret::shootAtPlayer(Player* player, std::list<Bullet>& enemyBullets) {
         }
     }
 
+
+    // float dx = playerCenter.x - turretCenter.x;
+    // float dy = playerCenter.y - turretCenter.y;
+    // vector2d bulletVel = {0.0f, 0.0f};
+    // const float epsilon = 5.0f; // Tăng epsilon một chút để xử lý trường hợp Player ở rất gần
+
+    // if (std::abs(dx) < epsilon && std::abs(dy) < epsilon) {
+    //     // Player ở rất gần tâm Turret, có thể chọn một hướng mặc định, ví dụ bắn sang phải
+    //     bulletVel.x = TURRET_BULLET_SPEED;
+    //     bulletVel.y = 0.0f;
+    // } else {
+    //     float absDx = std::abs(dx);
+    //     float absDy = std::abs(dy);
+
+    //     // Ưu tiên hướng có độ chênh lệch lớn hơn
+    //     if (absDx > absDy) {
+    //         // Khoảng cách theo chiều X lớn hơn -> Bắn ngang
+    //         bulletVel.x = std::copysign(TURRET_BULLET_SPEED, dx); // Lấy dấu của dx
+    //         bulletVel.y = 0.0f;
+    //     } else {
+    //         // Khoảng cách theo chiều Y lớn hơn hoặc bằng -> Bắn dọc
+    //         bulletVel.x = 0.0f;
+    //         bulletVel.y = std::copysign(TURRET_BULLET_SPEED, dy); // Lấy dấu của dy
+    //     }
+    // }
+
     // TRUYỀN KÍCH THƯỚC RENDER VÀO CONSTRUCTOR CỦA BULLET
     enemyBullets.emplace_back(bulletTopLeftSpawnPos, bulletVel, this->bulletTexture, 
                               turretBulletRenderW, turretBulletRenderH);
@@ -295,7 +321,7 @@ void Turret::render(RenderWindow& window, float cameraX, float cameraY) {
             SDL_RenderCopy(window.getRenderer(), turretTexture, &currentFrameSrcTurret, &destRect);
         }
     }
-
+    // THÊM PHƯƠNG THỨC NÀY VÀO CUỐI FILE Turret.cpp
     #ifdef DEBUG_DRAW_HITBOXES
     if (currentState != TurretState::DESTROYED_ANIM && currentState != TurretState::FULLY_DESTROYED) {
         SDL_SetRenderDrawColor(window.getRenderer(), 255, 0, 255, 100); // Màu tím cho hitbox
@@ -307,3 +333,17 @@ void Turret::render(RenderWindow& window, float cameraX, float cameraY) {
     #endif
 }
 
+void Turret::forceExplode() {
+    if (currentState != TurretState::FULLY_DESTROYED && currentState != TurretState::DESTROYED_ANIM) {
+        hp = 0; // Đảm bảo nó được coi là đã bị phá hủy cho logic
+        currentState = TurretState::DESTROYED_ANIM;
+        animTimerExplosion = 0.0f;
+        currentAnimFrameIndexExplosion = 0;
+        // Không phát âm thanh nổ ở đây, Boss sẽ quản lý âm thanh nổ tổng thể
+        // if (explosionSound) Mix_PlayChannel(-1, explosionSound, 0);
+    }
+}
+
+void Turret::setHp(int newHp) {
+    hp = newHp;
+}

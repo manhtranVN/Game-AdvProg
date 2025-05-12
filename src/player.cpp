@@ -8,17 +8,12 @@
 #include <iostream>
 #include <set>
 #include <utility>
-#include <SDL2/SDL_mixer.h> // Đã có, tốt!
-
-// Tile Type Constants
+#include <SDL2/SDL_mixer.h> 
 const int TILE_EMPTY_P = 0; 
 const int TILE_GRASS_P = 1; 
 const int TILE_UNKNOWN_SOLID_P = 2;
 const int TILE_WATER_SURFACE_P = 3; 
-const int TILE_ABYSS_P = 5; // Giữ lại để xử lý bên trong map, ở đáy map sẽ có logic riêng
-
-// Giả định gPlayerDeathSound được khai báo là 'extern Mix_Chunk* gPlayerDeathSound;' trong Player.hpp
-// và Player.hpp đã #include <SDL2/SDL_mixer.h>
+const int TILE_ABYSS_P = 5; 
 
 Player::Player(vector2d p_pos,
            SDL_Texture* p_runTex, int p_runSheetCols, SDL_Texture* p_jumpTex, int p_jumpSheetCols,
@@ -61,13 +56,11 @@ Player::Player(vector2d p_pos,
       currentMapData(nullptr), currentMapRows(0), currentMapCols(0), currentTileWidth(0), currentTileHeight(0)
 {}
 
-// --- Setter ---
 void Player::setInvulnerable(bool value) {
     invulnerable = value;
     invulnerableTimer = value ? INVULNERABLE_DURATION : 0.0f;
 }
 
-// --- Reset ---
 void Player::resetPlayerStateForNewGame(){
     lives = 4; velocity = {0.0f, 0.0f}; currentState = PlayerState::FALLING;
     isOnGround = false; isInWaterState = false; setInvulnerable(false);
@@ -79,7 +72,6 @@ void Player::resetPlayerStateForNewGame(){
     std::cout << "Player state reset for new game. Lives: " << lives << std::endl;
 }
 
-// --- Getters ---
 SDL_Rect Player::getWorldHitbox() {
     SDL_Rect worldHB; worldHB.x = static_cast<int>(round(pos.x + hitbox.x)); worldHB.y = static_cast<int>(round(pos.y + hitbox.y)); worldHB.w = hitbox.w; worldHB.h = hitbox.h; return worldHB;
 }
@@ -96,7 +88,6 @@ int Player::getTileAt(float worldX, float worldY) const {
     return TILE_EMPTY_P; 
 }
 
-// --- Input Handling ---
 void Player::handleInput(const Uint8* keyStates) { 
     if (currentState == PlayerState::DYING || currentState == PlayerState::DEAD) return;
     aimUpHeld = keyStates[SDL_SCANCODE_UP]; aimDownHeld = keyStates[SDL_SCANCODE_DOWN]; isShootingHeld = keyStates[SDL_SCANCODE_F];
@@ -114,7 +105,6 @@ void Player::handleKeyDown(SDL_Keycode key) {
     else if (key == SDLK_e && isOnGround && !isInWaterState && !isLyingDownState) { if (!isAimingStraightUpState) wantsToAimStraightUp = true; else wantsToStopAimStraightUp = true; wantsToStopAimStraightUp = !wantsToAimStraightUp;}
 }
 
-// --- Shooting ---
 bool Player::wantsToShoot(vector2d& out_bulletStartPos, vector2d& out_bulletVelocity) { 
     if (!shootRequested || getIsDead()) { shootRequested = false; return false; } shootRequested = false;
     SDL_Rect hb = getWorldHitbox(); float startX=0.f, startY=0.f, bulletVelX=0.f, bulletVelY=0.f; PlayerState effAim = determineAimingOrShootingState();
@@ -126,9 +116,70 @@ bool Player::wantsToShoot(vector2d& out_bulletStartPos, vector2d& out_bulletVelo
         case PlayerState::STAND_AIM_DIAG_DOWN: case PlayerState::RUN_AIM_DIAG_DOWN: startX=(facing==FacingDirection::RIGHT)?(hb.x+hb.w):(hb.x-bOffX); startY=static_cast<float>(hb.y)+bOffYStandDD; bulletVelX=(facing==FacingDirection::RIGHT)?BULLET_SPEED_DIAG_COMPONENT:-BULLET_SPEED_DIAG_COMPONENT; bulletVelY=BULLET_SPEED_DIAG_COMPONENT; break;
         default: startX=(facing==FacingDirection::RIGHT)?(hb.x+hb.w):(hb.x-bOffX); startY=static_cast<float>(hb.y)+bOffYStandH; bulletVelX=(facing==FacingDirection::RIGHT)?BULLET_SPEED:-BULLET_SPEED; bulletVelY=0.f; break;
     } out_bulletStartPos={startX,startY}; out_bulletVelocity={bulletVelX,bulletVelY}; return true;
+
+    // Trong Player.cpp, hàm wantsToShoot
+    // ...
+    // switch (effAim) {
+    //     case PlayerState::LYING_AIM_SHOOT: // Bắn ngang khi nằm (Giữ nguyên)
+    //         startX = (facing == FacingDirection::RIGHT) ? (hb.x + hb.w + bOffX / 2.f) : (hb.x - bOffX);
+    //         startY = static_cast<float>(hb.y) + bOffYLying;
+    //         bulletVelX = (facing == FacingDirection::RIGHT) ? BULLET_SPEED : -BULLET_SPEED;
+    //         bulletVelY = 0.f;
+    //         break;
+
+    //     case PlayerState::STAND_AIM_UP: // Bắn thẳng đứng lên (Giữ nguyên)
+    //         startX = static_cast<float>(hb.x + hb.w / 2.f - 2.f);
+    //         startY = static_cast<float>(hb.y) + bOffYUp;
+    //         bulletVelX = 0.f;
+    //         bulletVelY = -BULLET_SPEED;
+    //         break;
+
+    //     // --- CÁC TRẠNG THÁI BẮN CHÉO LÊN ---
+    //     case PlayerState::STAND_AIM_DIAG_UP:
+    //     case PlayerState::RUN_AIM_DIAG_UP:
+    //         // GỐC:
+    //         // startX = (facing == FacingDirection::RIGHT) ? (hb.x + hb.w * 0.8f) : (hb.x + hb.w * 0.2f - bOffX);
+    //         // startY = static_cast<float>(hb.y) + bOffYStandDU;
+    //         // bulletVelX = (facing == FacingDirection::RIGHT) ? BULLET_SPEED_DIAG_COMPONENT : -BULLET_SPEED_DIAG_COMPONENT;
+    //         // bulletVelY = -BULLET_SPEED_DIAG_COMPONENT;
+
+    //         // SỬA ĐỔI ĐỂ BẮN THẲNG ĐỨNG LÊN: (Giống như STAND_AIM_UP)
+    //         startX = static_cast<float>(hb.x + hb.w / 2.f - 2.f); // Căn giữa
+    //         startY = static_cast<float>(hb.y) + bOffYUp;          // Vị trí trên đầu
+    //         bulletVelX = 0.f;
+    //         bulletVelY = -BULLET_SPEED;
+    //         break;
+
+    //     // --- CÁC TRẠNG THÁI BẮN CHÉO XUỐNG ---
+    //     case PlayerState::STAND_AIM_DIAG_DOWN:
+    //     case PlayerState::RUN_AIM_DIAG_DOWN:
+    //         // GỐC:
+    //         // startX = (facing == FacingDirection::RIGHT) ? (hb.x + hb.w) : (hb.x - bOffX);
+    //         // startY = static_cast<float>(hb.y) + bOffYStandDD;
+    //         // bulletVelX = (facing == FacingDirection::RIGHT) ? BULLET_SPEED_DIAG_COMPONENT : -BULLET_SPEED_DIAG_COMPONENT;
+    //         // bulletVelY = BULLET_SPEED_DIAG_COMPONENT;
+
+    //         // SỬA ĐỔI ĐỂ BẮN NGANG (Giống như default / STAND_AIM_HORIZ):
+    //         startX = (facing == FacingDirection::RIGHT) ? (hb.x + hb.w) : (hb.x - bOffX);
+    //         startY = static_cast<float>(hb.y) + bOffYStandH; // Hoặc có thể dùng bOffYStandDD nếu muốn vị trí đạn thấp hơn
+    //         bulletVelX = (facing == FacingDirection::RIGHT) ? BULLET_SPEED : -BULLET_SPEED;
+    //         bulletVelY = 0.f;
+    //         // HOẶC: Nếu bạn không muốn cho bắn trong trạng thái này, bạn có thể return false
+    //         // if (!shootRequested) return false; // Hoặc một logic phức tạp hơn để chặn bắn
+    //         break;
+
+    //     default: // Bắn ngang (STAND_AIM_HORIZ, RUN_AIM_HORIZ, IDLE khi bắn, JUMPING/FALLING khi bắn)
+    //         startX = (facing == FacingDirection::RIGHT) ? (hb.x + hb.w) : (hb.x - bOffX);
+    //         startY = static_cast<float>(hb.y) + bOffYStandH;
+    //         bulletVelX = (facing == FacingDirection::RIGHT) ? BULLET_SPEED : -BULLET_SPEED;
+    //         bulletVelY = 0.f;
+    //         break;
+    // }
+    // out_bulletStartPos = {startX, startY};
+    // out_bulletVelocity = {bulletVelX, bulletVelY};
+    // return true;
 }
 
-// --- State Determination ---
 PlayerState Player::determineAimingOrShootingState() const {
     if (isLyingDownState) return (isShootingHeld || aimUpHeld || aimDownHeld) ? PlayerState::LYING_AIM_SHOOT : PlayerState::LYING_DOWN;
     if (isAimingStraightUpState) return PlayerState::STAND_AIM_UP;
@@ -145,7 +196,6 @@ PlayerState Player::determineAimingOrShootingState() const {
     return isMoving ? PlayerState::RUNNING : PlayerState::IDLE; 
 }
 
-// --- Update Logic ---
 void Player::update(float dt, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight) {
     currentMapData = &mapData; currentTileWidth = tileWidth; currentTileHeight = tileHeight;
     currentMapRows = mapData.size(); if (currentMapRows > 0) currentMapCols = mapData[0].size(); else currentMapCols = 0;
@@ -187,7 +237,6 @@ void Player::update(float dt, const std::vector<std::vector<int>>& mapData, int 
     restoreDisabledTiles();
 }
 
-// --- Physics & Collision ---
 void Player::applyGravity(float dt) {
     if ((isLyingDownState && isOnGround) || currentState == PlayerState::DEAD || currentState == PlayerState::DYING) {
         if(isOnGround && currentState != PlayerState::DYING && currentState != PlayerState::DEAD) velocity.y = 0.0f; 
@@ -222,7 +271,6 @@ void Player::checkMapCollision() {
     SDL_Rect playerHB = getWorldHitbox();
     bool deathTriggeredThisCollisionCheck = false; 
 
-    // Check Ceiling
     if (velocity.y < 0.0f && !isInWaterState) {
         float headY = static_cast<float>(playerHB.y);
         float midX = static_cast<float>(playerHB.x + playerHB.w / 2.0f);
@@ -236,24 +284,20 @@ void Player::checkMapCollision() {
     bool landedOnSolidThisFrame = false; 
     bool fellIntoWaterThisFrame = false; 
 
-    // Check Floor/Water (cho các tile BÊN TRONG map)
     if (velocity.y >= 0.0f || isOnGround) { 
         float feetY_check_offset = (isOnGround && !isLyingDownState && velocity.y == 0.0f) ? 0.1f : 1.0f;
         float feetY_center = static_cast<float>(playerHB.y + playerHB.h + feetY_check_offset);
         float midX = static_cast<float>(playerHB.x + playerHB.w / 2.0f);
-        // float feetX_left = static_cast<float>(playerHB.x + 1.0f); 
-        // float feetX_right = static_cast<float>(playerHB.x + playerHB.w - 1.0f); 
 
         int tileRowBelow = static_cast<int>(floor(feetY_center / currentTileHeight));
 
         if (tileRowBelow < currentMapRows) { 
-            // Sử dụng nhiều điểm kiểm tra hơn dưới chân để xử lý tốt hơn khi đứng trên cạnh
             float checkPointsX[] = {
-                static_cast<float>(playerHB.x + hitbox.w * 0.25f), // Điểm kiểm tra bên trái
-                midX,                                              // Điểm kiểm tra giữa
-                static_cast<float>(playerHB.x + hitbox.w * 0.75f)  // Điểm kiểm tra bên phải
+                static_cast<float>(playerHB.x + hitbox.w * 0.25f), 
+                midX,                                              
+                static_cast<float>(playerHB.x + hitbox.w * 0.75f)  
             };
-            int effectiveTileBelow = TILE_EMPTY_P; // Mặc định là không có gì bên dưới
+            int effectiveTileBelow = TILE_EMPTY_P;
             bool foundSolidOrWater = false;
 
             for (float checkX : checkPointsX) {
@@ -263,16 +307,14 @@ void Player::checkMapCollision() {
                     foundSolidOrWater = true;
                     break; 
                 }
-                if (tileType == TILE_WATER_SURFACE_P && !foundSolidOrWater) { // Ưu tiên đất liền hơn nước nếu cả hai đều có
+                if (tileType == TILE_WATER_SURFACE_P && !foundSolidOrWater) { 
                     effectiveTileBelow = tileType;
                     foundSolidOrWater = true; 
-                    // Không break ngay, để xem có đất liền ở điểm khác không
                 }
-                if (tileType == TILE_ABYSS_P && !foundSolidOrWater) { // Abyss chỉ được coi là "rỗng" nếu không có gì khác
-                     effectiveTileBelow = TILE_ABYSS_P; // Hoặc TILE_EMPTY_P
+                if (tileType == TILE_ABYSS_P && !foundSolidOrWater) { 
+                     effectiveTileBelow = TILE_ABYSS_P; 
                 }
             }
-             // Nếu sau khi kiểm tra các điểm, không thấy gì đặc biệt, dùng điểm giữa
             if (!foundSolidOrWater && effectiveTileBelow != TILE_ABYSS_P) {
                 effectiveTileBelow = getTileAt(midX, feetY_center);
             }
@@ -280,7 +322,7 @@ void Player::checkMapCollision() {
 
             bool isDroppingThroughThisTile = false;
             if (effectiveTileBelow == TILE_GRASS_P) {
-                int checkCol = static_cast<int>(floor(midX / currentTileWidth)); // Hoặc checkX của điểm tìm thấy cỏ
+                int checkCol = static_cast<int>(floor(midX / currentTileWidth));
                 if (temporarilyDisabledTiles.count({tileRowBelow, checkCol})) {
                     isDroppingThroughThisTile = true;
                 }
@@ -302,10 +344,9 @@ void Player::checkMapCollision() {
                     waterSurfaceY = static_cast<float>(tileRowBelow * currentTileHeight); 
                     pos.y = waterSurfaceY - hitbox.h * 0.7f;
                 }
-                // Nếu đã ở trong nước, không làm gì thêm ở đây, chỉ giữ isInWaterState
-            } else { // Tile trống (TILE_EMPTY_P) hoặc Abyss (TILE_ABYSS_P)
+                
+            } else { 
                  isOnGround = false;
-                 // isInWaterState không thay đổi, sẽ được xử lý bởi ExitWaterCheck hoặc khi chạm đáy
             }
         } else {
              isOnGround = false; 
@@ -316,7 +357,6 @@ void Player::checkMapCollision() {
         }
     }
 
-    // Check Walls 
     playerHB = getWorldHitbox(); 
     float checkY_mid_wall = static_cast<float>(playerHB.y + hitbox.h / 2.0f); 
     float checkY_top_wall = static_cast<float>(playerHB.y + 1.0f);
@@ -342,7 +382,6 @@ void Player::checkMapCollision() {
         }
     }
 
-    // Exit Water Check 
     if (isInWaterState && !fellIntoWaterThisFrame && velocity.y < 0.0f) {
         playerHB = getWorldHitbox(); 
         if (static_cast<float>(playerHB.y) < waterSurfaceY) {
@@ -354,21 +393,19 @@ void Player::checkMapCollision() {
         }
     }
 
-    // ---- LOGIC "TELEPORT" KHI CHUYỂN TỪ NƯỚC SANG CỎ Ở ĐÁY MAP ----
     if (isInWaterState && currentMapRows > 0 && !deathTriggeredThisCollisionCheck &&
         (currentState != PlayerState::DYING && currentState != PlayerState::DEAD)) {
         
         playerHB = getWorldHitbox();
         int lastRowActualIndex = currentMapRows - 1;
-        float playerFeetYForLastRowCheck = static_cast<float>(playerHB.y + playerHB.h + 1.0f); // Kiểm tra ngay dưới chân
+        float playerFeetYForLastRowCheck = static_cast<float>(playerHB.y + playerHB.h + 1.0f);
         float playerMidX = static_cast<float>(playerHB.x + playerHB.w / 2.0f);
 
-        // Kiểm tra xem chân người chơi có đang ở gần hàng cuối không
         if (static_cast<int>(floor(playerFeetYForLastRowCheck / currentTileHeight)) >= lastRowActualIndex) {
             int tileBelowPlayerAtLastRow = getTileAt(playerMidX, (static_cast<float>(lastRowActualIndex) + 0.5f) * currentTileHeight);
 
             if (tileBelowPlayerAtLastRow == TILE_GRASS_P) {
-                // Đang trong nước VÀ tile ngay dưới (ở hàng cuối) là cỏ => Teleport lên cỏ
+                
                 pos.y = static_cast<float>(lastRowActualIndex * currentTileHeight) - hitbox.h - hitbox.y;
                 velocity.y = 0.0f;
                 isOnGround = true;

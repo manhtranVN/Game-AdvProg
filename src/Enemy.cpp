@@ -10,20 +10,17 @@ const int TILE_GRASS_E = 1;
 const int TILE_UNKNOWN_SOLID_E = 2;
 
 Enemy::Enemy(vector2d p_pos, SDL_Texture* p_tex)
-    : // Khởi tạo theo đúng thứ tự khai báo trong Enemy.hpp
+    : 
       pos(p_pos),
       tex(p_tex),
-      // currentFrame sẽ được khởi tạo sau khi frameWidth/Height có giá trị
-      // frameWidth, frameHeight, sheetColumns được tính toán bên dưới
       currentAnimFrameIndex(0),
       animTimer(0.0f),
       currentState(EnemyState::ALIVE),
-      // hitbox sẽ được khởi tạo sau khi frameWidth/Height có giá trị
       velocityY(0.0f),
       isOnGround(false),
       dyingTimer(0.0f),
       isVisible(true),
-      movingRight(false) // Enemy bắt đầu đi sang trái
+      movingRight(false)
 {
     if (tex) {
         int totalTextureWidth, totalTextureHeight;
@@ -41,7 +38,6 @@ Enemy::Enemy(vector2d p_pos, SDL_Texture* p_tex)
         std::cerr << "Error: Enemy created with NULL texture! Using default values." << std::endl;
     }
 
-    // Khởi tạo currentFrame và hitbox sau khi có frameWidth/Height
     currentFrame.x = 0; currentFrame.y = 0;
     currentFrame.w = frameWidth; currentFrame.h = frameHeight;
 
@@ -51,7 +47,6 @@ Enemy::Enemy(vector2d p_pos, SDL_Texture* p_tex)
     hitbox.y = frameHeight - hitbox.h;
 }
 
-// ... (Các hàm update, render, getTileAt, takeHit, etc. giữ nguyên như trước) ...
 
 int Enemy::getTileAt(float worldX, float worldY, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight) const {
     if (worldX < 0.0f || worldY < 0.0f || tileWidth <= 0 || tileHeight <= 0 || mapData.empty()) return TILE_EMPTY_E;

@@ -4,7 +4,7 @@
 
 // Đảm bảo M_PI được định nghĩa (quan trọng cho MSVC)
 #ifndef M_PI
-    #define M_PI 3.14159265358979323846
+#define M_PI 3.14159265358979323846
 #endif
 
 struct vector2d
@@ -14,7 +14,7 @@ struct vector2d
     {}
     vector2d(float p_x, float p_y)
     :x(p_x), y(p_y)
-    {}
+    {}  
 
     void print()
     {

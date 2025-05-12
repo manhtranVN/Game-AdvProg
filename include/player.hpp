@@ -8,7 +8,7 @@
 #include <SDL2/SDL_mixer.h>
 #include "math.hpp"
 
-class RenderWindow; // Forward declaration
+class RenderWindow; 
 
 extern Mix_Chunk* gPlayerDeathSound;
 
@@ -22,11 +22,9 @@ enum class FacingDirection { LEFT, RIGHT };
 
 class Player {
 public:
-    // --- Constants (ĐẦY ĐỦ) ---
-    const float GRAVITY = 980.0f; const float MOVE_SPEED = 300.0f;
+    const float GRAVITY = 980.0f; 
+    const float MOVE_SPEED = 300.0f;
     const float JUMP_STRENGTH = 600.0f; const float MAX_FALL_SPEED = 600.0f;
-    // const float WATER_GRAVITY_MULTIPLIER = 0.3f; // BỎ ĐI
-    // const float WATER_MAX_SPEED_MULTIPLIER = 0.5f; // BỎ ĐI
     const float WATER_DRAG_X = 0.85f; const float WATER_JUMP_STRENGTH = 300.0f;
     const float BULLET_SPEED = 600.0f;
     const float BULLET_SPEED_DIAG_COMPONENT = BULLET_SPEED * 0.70710678118f;
@@ -35,7 +33,6 @@ public:
     const float SHOOT_COOLDOWN = 0.15f;
     const float DYING_DURATION = 0.8f;    
     const float BLINK_INTERVAL = 0.1f;    
-    // --- Frame counts (ĐẦY ĐỦ) ---
     const int RUN_FRAMES = 6; const int JUMP_FRAMES = 4;
     const int ENTER_WATER_FRAMES = 1; const int SWIM_FRAMES = 5;
     const int STAND_AIM_SHOOT_HORIZ_FRAMES = 1; const int RUN_AIM_SHOOT_HORIZ_FRAMES = 3;
@@ -44,7 +41,6 @@ public:
     const int STAND_AIM_SHOOT_DIAG_DOWN_FRAMES = 1; const int RUN_AIM_SHOOT_DIAG_DOWN_FRAMES = 3;
     const int LYING_DOWN_FRAMES = 1; const int LYING_AIM_SHOOT_FRAMES = 1;
 
-    // Constructor 
     Player(vector2d p_pos,
            SDL_Texture* p_runTex, int p_runSheetCols, SDL_Texture* p_jumpTex, int p_jumpSheetCols,
            SDL_Texture* p_enterWaterTex, int p_enterWaterSheetCols, SDL_Texture* p_swimTex, int p_swimSheetCols,
@@ -55,7 +51,6 @@ public:
            SDL_Texture* p_lyingAimShootTex, int p_lyingAimShootSheetCols,
            int p_standardFrameW, int p_standardFrameH, int p_lyingFrameW, int p_lyingFrameH);
 
-    // Public methods
     void update(float dt, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight);
     void render(RenderWindow& window, float cameraX, float cameraY);
     void handleInput(const Uint8* keyStates);
@@ -81,10 +76,8 @@ public:
     void setInvulnerable(bool value);
 
 private:
-    // Khai báo thành viên theo thứ tự khởi tạo mong muốn
     vector2d pos;
 
-    // --- Textures (ĐẦY ĐỦ) ---
     SDL_Texture *runTexture;
     SDL_Texture *jumpTexture;
     SDL_Texture *enterWaterTexture;
@@ -99,7 +92,6 @@ private:
     SDL_Texture *lyingDownTexture;
     SDL_Texture *lyingAimShootTexture;
     
-    // --- Sheet Columns (ĐẦY ĐỦ) ---
     int runSheetColumns;
     int jumpSheetColumns;
     int enterWaterSheetColumns;
@@ -114,21 +106,18 @@ private:
     int lyingDownSheetColumns;
     int lyingAimShootSheetColumns;
     
-    // Frame Dimensions & Animation
     SDL_Rect currentSourceRect;
     int standardFrameWidth, standardFrameHeight;
     int lyingFrameWidth, lyingFrameHeight;
     float animTimer;
     int currentAnimFrameIndex;
 
-    // Physics & Collision
     vector2d velocity;
     SDL_Rect hitbox, originalStandingHitboxDef;
     bool isOnGround, isInWaterState;
     float waterSurfaceY;
     std::set<std::pair<int, int>> temporarilyDisabledTiles;
 
-    // Game State & Input
     PlayerState currentState;
     FacingDirection facing;
     bool shootRequested, aimUpHeld, aimDownHeld, isShootingHeld;
@@ -141,13 +130,10 @@ private:
     bool isVisible;      
     float dyingTimer;   
 
-    // Map Data (con trỏ)
     const std::vector<std::vector<int>>* currentMapData;
     int currentMapRows, currentMapCols, currentTileWidth, currentTileHeight;
 
-    // Private Methods
     void applyGravity(float dt); void movePlayer(float dt); void checkMapCollision();
     void updateCurrentState(); void updatePlayerAnimation(float dt); void restoreDisabledTiles();
     void applyStateBasedMovementRestrictions(); PlayerState determineAimingOrShootingState() const;
 };
-
