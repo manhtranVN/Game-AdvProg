@@ -55,7 +55,7 @@ public:
     void render(RenderWindow& window, float cameraX, float cameraY);
     void handleInput(const Uint8* keyStates);
     void handleKeyDown(SDL_Keycode key);
-    int getTileAt(float worldX, float worldY) const;
+    int getTileAt(float worldX, float worldY, bool ignoreDisabledTiles = false) const;
     SDL_Rect getWorldHitbox();
     bool wantsToShoot(vector2d& out_bulletStartPos, vector2d& out_bulletVelocity);
     void takeHit(bool isFallDamage);
@@ -134,6 +134,6 @@ private:
     int currentMapRows, currentMapCols, currentTileWidth, currentTileHeight;
 
     void applyGravity(float dt); void movePlayer(float dt); void checkMapCollision();
-    void updateCurrentState(); void updatePlayerAnimation(float dt); void restoreDisabledTiles();
+    void updateCurrentState(); void updatePlayerAnimation(float dt); void restoreDisabledTiles(bool forceRestoreAll = false);
     void applyStateBasedMovementRestrictions(); PlayerState determineAimingOrShootingState() const;
 };

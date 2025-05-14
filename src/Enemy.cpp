@@ -53,7 +53,6 @@ int Enemy::getTileAt(float worldX, float worldY, const std::vector<std::vector<i
     int col = static_cast<int>(floor(worldX / tileWidth));
     int row = static_cast<int>(floor(worldY / tileHeight));
 
-    // Sửa lỗi sign-compare
     if (row >= 0 && static_cast<size_t>(row) < mapData.size()) {
         const auto& rowData = mapData[row];
         if (col >= 0 && static_cast<size_t>(col) < rowData.size()) {

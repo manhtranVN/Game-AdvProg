@@ -6,8 +6,8 @@
 #include <list>
 #include <memory>
 #include "math.hpp"
-#include "Turret.hpp" // Boss sẽ chứa các Turret làm bộ phận
-#include "Enemy.hpp"  // Boss có thể spawn Enemy
+#include "Turret.hpp"
+#include "Enemy.hpp"
 #include "Player.hpp"
 #include "RenderWindow.hpp"
 
@@ -22,18 +22,18 @@ public:
     void update(float dt, Player* player, std::list<Bullet>& enemyBullets, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight);
     void render(RenderWindow& window, float cameraX, float cameraY);
 
-    void takeHit(); // Gọi khi một bộ phận của boss bị bắn trúng
+    void takeHit();
     bool isDefeated() const;
     bool isActive() const;
     void activate();
 
     float getHpPercentage() const;
-    const std::vector<std::unique_ptr<Turret>>& getParts() const { return bossParts; } // Để kiểm tra va chạm
+    const std::vector<std::unique_ptr<Turret>>& getParts() const { return bossParts; }
 
 private:
     static const int TOTAL_HP = 50;
-    static constexpr float ENEMY_SPAWN_INTERVAL = 8.0f; // Giây
-    static constexpr float EXPLOSION_SOUND_DELAY = 0.1f; // Để âm thanh nổ của boss không bị chồng chéo quá nhiều
+    static constexpr float ENEMY_SPAWN_INTERVAL = 8.0f;
+    static constexpr float EXPLOSION_SOUND_DELAY = 0.1f;
 
     int currentHp;
     bool bIsActive;
@@ -42,15 +42,14 @@ private:
 
 
     std::vector<std::unique_ptr<Turret>> bossParts;
-    SDL_Texture* partTexture; // Dùng cho các Turret part
+    SDL_Texture* partTexture;
     SDL_Texture* explosionTextureForParts;
-    Mix_Chunk* explosionSound; // Âm thanh nổ chính của Boss
+    Mix_Chunk* explosionSound;
     Mix_Chunk* partShootSound;
     SDL_Texture* bulletTextureForParts;
 
 
-    // Để spawn enemy
-    std::list<Enemy>* enemies_list_ref; // Tham chiếu đến danh sách enemy của game
+    std::list<Enemy>* enemies_list_ref;
     SDL_Texture* enemyTextureToSpawn;
     float enemySpawnTimer;
     float individualPartExplosionTimer;
