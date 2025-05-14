@@ -117,7 +117,8 @@ void Turret::update(float dt, Player* player, std::list<Bullet>& enemyBullets) {
                 currentAnimFrameIndexExplosion++;
                 if (currentAnimFrameIndexExplosion >= NUM_FRAMES_EXPLOSION)
                 {
-                    currentAnimFrameIndexExplosion = 0;
+                    currentState = TurretState::FULLY_DESTROYED;
+                    currentAnimFrameIndexExplosion = NUM_FRAMES_EXPLOSION - 1;
                 }
             }
             currentFrameSrcExplosion.x = currentAnimFrameIndexExplosion * sheetFrameWidthExplosion;
@@ -128,6 +129,9 @@ void Turret::update(float dt, Player* player, std::list<Bullet>& enemyBullets) {
         else
         {
             currentState = TurretState::FULLY_DESTROYED;
+        }
+        if (currentState == TurretState::FULLY_DESTROYED) {
+            return;
         }
         return;
     }
@@ -361,9 +365,11 @@ bool Turret::isFullyDestroyed() const {
 void Turret::render(RenderWindow& window, float cameraX, float cameraY) {
     SDL_Rect destRect;
 
+    // Sửa đổi điều kiện render animation nổ:
+    // Chỉ render animation nổ nếu đang trong DESTROYED_ANIM HOẶC nếu là FULLY_DESTROYED nhưng frame nổ chưa phải là frame cuối cùng
+    // (để đảm bảo frame cuối của vụ nổ được render một lần trước khi isFullyDestroyed() trả về true hoàn toàn).
     if (currentState == TurretState::DESTROYED_ANIM ||
-        (currentState == TurretState::FULLY_DESTROYED && this->explosionTexture && currentAnimFrameIndexExplosion < NUM_FRAMES_EXPLOSION) )
-    {
+        (currentState == TurretState::FULLY_DESTROYED && this->explosionTexture && currentAnimFrameIndexExplosion < NUM_FRAMES_EXPLOSION -1 )) { // Chú ý: < NUM_FRAMES_EXPLOSION -1
         if (this->explosionTexture)
         {
             float explosionRenderWidth = static_cast<float>(currentFrameSrcExplosion.w);
@@ -387,8 +393,6 @@ void Turret::render(RenderWindow& window, float cameraX, float cameraY) {
         };
         SDL_RenderCopy(window.getRenderer(), this->turretTexture, &currentFrameSrcTurret, &destRect);
     }
-
-
 }
 
 void Turret::setHp(int newHp) {
@@ -398,16 +402,17 @@ void Turret::setHp(int newHp) {
 void Turret::forceExplode() {
     if (currentState != TurretState::FULLY_DESTROYED && currentState != TurretState::DESTROYED_ANIM)
     {
-        hp = 0;
+        hp = 0; // Đặt HP về 0 để logic takeDamage (nếu có) không can thiệp
         if (this->explosionTexture)
         {
-            currentState = TurretState::DESTROYED_ANIM;
-            animTimerExplosion = 0.0f;
-            currentAnimFrameIndexExplosion = 0;
+            currentState = TurretState::DESTROYED_ANIM; // Chuyển sang trạng thái nổ
+            animTimerExplosion = 0.0f;               // Reset timer animation nổ
+            currentAnimFrameIndexExplosion = 0;      // Bắt đầu từ frame đầu tiên của animation nổ
+            // Âm thanh nổ của boss part thường sẽ do Boss quản lý, không phát ở đây trừ khi có yêu cầu riêng
         }
         else
         {
-            currentState = TurretState::FULLY_DESTROYED;
+            currentState = TurretState::FULLY_DESTROYED; // Nếu không có animation nổ, coi như bị phá hủy ngay
         }
     }
 }

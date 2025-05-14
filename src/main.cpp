@@ -377,8 +377,16 @@ int main(int argc, char* args[]) {
         };
         spawnEnemyFunc(8.0f*LOGICAL_TILE_WIDTH, 3);
         spawnEnemyFunc(15.0f*LOGICAL_TILE_WIDTH, 3);
-        spawnEnemyFunc(40.0f*LOGICAL_TILE_WIDTH, 2);
-
+        spawnEnemyFunc(30.0f*LOGICAL_TILE_WIDTH, 2);
+        spawnEnemyFunc(40.0f*LOGICAL_TILE_WIDTH, 4);
+        spawnEnemyFunc(45.0f*LOGICAL_TILE_WIDTH, 3);
+        spawnEnemyFunc(55.0f*LOGICAL_TILE_WIDTH, 4);
+        spawnEnemyFunc(67.0f*LOGICAL_TILE_WIDTH, 2);
+        spawnEnemyFunc(73.0f*LOGICAL_TILE_WIDTH, 4);
+        spawnEnemyFunc(77.0f*LOGICAL_TILE_WIDTH, 3);
+        spawnEnemyFunc(89.0f*LOGICAL_TILE_WIDTH, 3);
+        spawnEnemyFunc(92.0f*LOGICAL_TILE_WIDTH, 5);
+        spawnEnemyFunc(95.0f*LOGICAL_TILE_WIDTH, 3);
         for (int r = 0; r < mapRows; ++r) {
             for (int c = 0; c < mapCols; ++c) {
                 if (mapData[r][c] == 5 && c == lastMapCol) {
@@ -973,7 +981,6 @@ int main(int argc, char* args[]) {
         switch (currentGameState) {
             case GameState::MAIN_MENU: {
                 SDL_RenderCopy(renderer, menuBackgroundTexture, NULL, NULL);
-                SDL_Color titleColor = {255, 255, 0, 255};
                 SDL_Color optionColor = {255, 255, 255, 255};
                 SDL_Color selectedColor = {0, 255, 0, 255};
 
@@ -1216,7 +1223,7 @@ int main(int argc, char* args[]) {
                 int indentX = SCREEN_WIDTH/6;
                 int valueX = SCREEN_WIDTH/2 + indentX/2;
 
-                auto renderTextCentered = [&](TTF_Font* font, const string& text, int y, SDL_Color color, int customWidth = -1) { if(!font) return 0; SDL_Surface* surf = TTF_RenderText_Solid(font, text.c_str(), color); if(surf){ SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf); int textW = (customWidth != -1)? customWidth : surf->w; SDL_Rect dst = {(SCREEN_WIDTH - surf->w)/2, y, surf->w, surf->h}; SDL_RenderCopy(renderer, tex, NULL, &dst); int h = surf->h; SDL_DestroyTexture(tex); SDL_FreeSurface(surf); return h; } return 0; };
+                auto renderTextCentered = [&](TTF_Font* font, const string& text, int y, SDL_Color color, int customWidth = -1) { if(!font) return 0; SDL_Surface* surf = TTF_RenderText_Solid(font, text.c_str(), color); if(surf){ SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf); SDL_Rect dst = {(SCREEN_WIDTH - surf->w)/2, y, surf->w, surf->h}; SDL_RenderCopy(renderer, tex, NULL, &dst); int h = surf->h; SDL_DestroyTexture(tex); SDL_FreeSurface(surf); return h; } return 0; };
                 auto renderTextPair = [&](TTF_Font* font, const string& label, const string& value, int y, SDL_Color lblCol, SDL_Color valCol) { if(!font) return; SDL_Surface* sLbl = TTF_RenderText_Solid(font, label.c_str(), lblCol); SDL_Surface* sVal = TTF_RenderText_Solid(font, value.c_str(), valCol); if(sLbl){ SDL_Texture* tLbl = SDL_CreateTextureFromSurface(renderer, sLbl); SDL_Rect rLbl = {indentX, y, sLbl->w, sLbl->h}; SDL_RenderCopy(renderer, tLbl, NULL, &rLbl); SDL_DestroyTexture(tLbl); SDL_FreeSurface(sLbl); } if(sVal){ SDL_Texture* tVal = SDL_CreateTextureFromSurface(renderer, sVal); SDL_Rect rVal = {valueX, y, sVal->w, sVal->h}; SDL_RenderCopy(renderer, tVal, NULL, &rVal); SDL_DestroyTexture(tVal); SDL_FreeSurface(sVal); }};
 
                 renderTextCentered(menuFont, "VICTORY!", yPos, {0,255,0,255});
