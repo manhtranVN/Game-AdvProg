@@ -14,7 +14,7 @@ const int TILE_EMPTY_P = 0;
 const int TILE_GRASS_P = 1;
 const int TILE_UNKNOWN_SOLID_P = 2;
 const int TILE_WATER_SURFACE_P = 3;
-const int TILE_ABYSS_P = 5;
+const int TILE_ABYSS_P = 6;
 
 extern Mix_Chunk* gPlayerDeathSound;
 

@@ -65,15 +65,4 @@ SDL_Rect Bullet::getWorldHitbox() const {
     return worldHB;
 }
 
-int Bullet::getTileAt(double worldX, double worldY, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight) const {
-    const int TILE_EMPTY_FOR_GETTILE = 0; 
 
-    if (worldX < 0 || worldY < 0 || tileWidth <= 0 || tileHeight <= 0) return TILE_EMPTY_FOR_GETTILE;
-    int col = static_cast<int>(floor(worldX / tileWidth));
-    int row = static_cast<int>(floor(worldY / tileHeight));
-    if (row >= 0 && static_cast<size_t>(row) < mapData.size()) {
-        const auto& rowData = mapData[row];
-        if (col >= 0 && static_cast<size_t>(col) < rowData.size()) { return rowData[col]; }
-    }
-    return TILE_EMPTY_FOR_GETTILE;
-}

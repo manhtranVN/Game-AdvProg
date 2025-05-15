@@ -30,6 +30,5 @@ private:
     int renderWidth;
     int renderHeight;
 
-    int getTileAt(double worldX, double worldY, const std::vector<std::vector<int>>& mapData, int tileWidth, int tileHeight) const;
 };
 
